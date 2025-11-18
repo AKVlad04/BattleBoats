@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battle Boats - Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="centered-layout">
+
+    <div class="main-container">
+        <h1 class="main-title">🚢 Battle Boats</h1>
+        
+        <div class="auth-wrapper">
+            <div class="card auth-card">
+                <h2>Autentificare</h2>
+                <p class="hint">Ai deja cont?</p>
+                <input type="text" id="login-username" placeholder="Nume utilizator">
+                <input type="password" id="login-password" placeholder="Parola">
+                <button onclick="login()" class="btn-login">Intră în Joc</button>
+            </div>
+
+            <div class="card auth-card">
+                <h2>Înregistrare</h2>
+                <p class="hint">Jucător nou?</p>
+                <input type="text" id="reg-username" placeholder="Alege un nume">
+                <input type="password" id="reg-password" placeholder="Alege o parolă">
+                <button onclick="register()">Creează Cont</button>
+            </div>
+        </div>
+
+        <p id="message" class="status-message"></p>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

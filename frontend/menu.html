@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Battle Boats - Hangar</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="centered-layout">
+    <div class="container menu-container">
+        <h1>⚓ Comandă Centrală</h1>
+        <h2 id="welcome-msg">Salut, Amiral!</h2>
+        
+        <div class="menu-buttons">
+            <button onclick="startGame()" class="btn-large">⚔️ Caută Adversar</button>
+            <button onclick="openSettings()" class="btn-secondary">🎨 Personalizare Nave</button>
+            <button onclick="logout()" class="btn-danger">🚪 Log out</button>
+        </div>
+    </div>
+
+    <script>
+        const user = localStorage.getItem("connectedUser");
+        if(!user) window.location.href = "index.html";
+        document.getElementById("welcome-msg").innerText = "Salut, " + user + "!";
+
+        function startGame() {
+            window.location.href = "game.html"; 
+        }
+
+        function openSettings() {
+            alert("Aici vei putea alege skin-uri pentru nave! (Coming soon)");
+        }
+
+        function logout() {
+            localStorage.removeItem("connectedUser");
+            window.location.href = "index.html";
+        }
+    </script>
+</body>
+</html>

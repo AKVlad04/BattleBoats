@@ -1,0 +1,264 @@
+/* =========================================
+   1. SETĂRI GLOBALE (Se aplică peste tot)
+   ========================================= */
+body {
+    background-color: #2c3e50;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: white;
+    margin: 0;
+    display: flex;
+    justify-content: center; /* Centrează orizontal (stânga-dreapta) */
+    min-height: 100vh;
+}
+
+/* Titlu principal (pentru pagina de login) */
+.main-title {
+    text-align: center;
+    font-size: 3em;
+    margin-bottom: 30px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+/* =========================================
+   2. LAYOUT-URI SPECIFICE (Se pun pe <body>)
+   ========================================= */
+
+/* Folosit la Login și Meniu -> Centrează totul perfect la mijloc */
+.centered-layout {
+    align-items: center; 
+}
+
+/* Folosit la Joc -> Aliniază totul sus */
+.game-layout {
+    align-items: flex-start;
+    padding-top: 50px;
+}
+
+/* =========================================
+   3. PAGINA DE LOGIN / REGISTER (Side-by-Side)
+   ========================================= */
+
+.main-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Containerul care ține cele două cutii una lângă alta */
+.auth-wrapper {
+    display: flex;
+    gap: 40px; /* Spațiu între Login și Register */
+    flex-wrap: wrap; /* Pe ecrane mici le pune una sub alta */
+    justify-content: center;
+}
+
+/* Stil specific pentru cardurile de login/register */
+.auth-card {
+    width: 300px;
+    background-color: #34495e;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+}
+
+.hint {
+    color: #95a5a6;
+    font-size: 0.9em;
+    margin-top: -10px;
+    margin-bottom: 15px;
+}
+
+/* Mesajul de eroare/succes */
+.status-message {
+    margin-top: 20px;
+    font-weight: bold;
+    font-size: 1.2em;
+    text-align: center;
+    min-height: 30px;
+}
+
+/* =========================================
+   4. ELEMENTE DE FORMULAR (Input, Butoane)
+   ========================================= */
+
+input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 5px;
+    background-color: #ecf0f1;
+    box-sizing: border-box;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.3s;
+}
+
+button:hover {
+    background-color: #c0392b;
+}
+
+.btn-login {
+    background-color: #27ae60; /* Verde */
+}
+
+.btn-login:hover {
+    background-color: #2ecc71;
+}
+
+/* Butonul mare din meniu */
+.btn-large {
+    padding: 15px 30px;
+    font-size: 18px;
+    background-color: #e67e22;
+}
+
+/* Butonul de Logout */
+.btn-logout {
+    background-color: #7f8c8d;
+    width: auto;
+    padding: 5px 15px;
+}
+
+/* =========================================
+   5. PAGINA DE JOC (Arena)
+   ========================================= */
+
+.game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+/* Bara de sus (Buton Back) */
+.top-bar {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: 10px;
+}
+
+.btn-back {
+    background-color: transparent;
+    border: 2px solid #7f8c8d;
+    color: #ecf0f1;
+    padding: 5px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s;
+    width: auto; /* Override la width: 100% de la button */
+    margin-top: 0;
+}
+
+.btn-back:hover {
+    background-color: #7f8c8d;
+    color: white;
+}
+
+/* Zona tablelor de joc */
+.boards-wrapper {
+    display: flex;
+    gap: 50px;
+    margin-top: 20px;
+}
+
+.board-section h3 {
+    text-align: center;
+    color: #bdc3c7;
+}
+
+.board {
+    display: grid;
+    grid-template-columns: repeat(10, 30px);
+    grid-template-rows: repeat(10, 30px);
+    gap: 2px;
+    background-color: #34495e;
+    padding: 5px;
+    border: 2px solid #2c3e50;
+}
+
+.cell {
+    width: 30px;
+    height: 30px;
+    background-color: #3498db;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+/* =========================================
+   6. INTERACȚIUNE NAVE (Drag & Drop)
+   ========================================= */
+
+.setup-area {
+    display: flex;
+    gap: 50px;
+    margin-top: 20px;
+}
+
+/* DOCK-ul (Cutia cu nave de jos) */
+.dock-container {
+    background-color: #2c3e50;
+    padding: 15px;
+    margin-top: 20px;
+    border-top: 4px solid #34495e;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    /* Tranziție pentru când îl ascundem/arătăm */
+    transition: opacity 0.3s ease;
+}
+
+/* Navele din Dock */
+.ship-preview {
+    background-color: #95a5a6;
+    padding: 8px 15px;
+    cursor: grab;
+    border-radius: 4px;
+    font-weight: bold;
+    color: #2c3e50;
+    border: 2px solid #7f8c8d;
+    transition: transform 0.1s;
+}
+
+.ship-preview:active {
+    transform: scale(0.95);
+    cursor: grabbing;
+}
+
+/* Nava pusă pe tablă (Galbenă) */
+.ship-cell {
+    background-color: #f1c40f !important;
+    border: 1px solid #d35400;
+    cursor: pointer;
+}
+
+/* FEEDBACK VIZUAL (Highlight la mutare) */
+.hover-valid {
+    background-color: #2ecc71 !important; /* Verde */
+}
+
+.hover-invalid {
+    background-color: #e74c3c !important; /* Roșu */
+}
+
+/* Status celule în timpul jocului */
+.hit { background-color: #e74c3c !important; } /* Lovit */
+.miss { background-color: white !important; }   /* Ratat */
