@@ -1,7 +1,8 @@
 package com.example.battleboats.service;
 
 import com.example.battleboats.model.User;
-import com.example.battleboats.repository.UserRepository;
+// ATENȚIE: Importul trebuie să se potrivească cu numele folderului tău (reprository)
+import com.example.battleboats.reprository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -10,10 +11,11 @@ import org.springframework.stereotype.Service;
 public class UserService {
 
     @Autowired
+    // AICI ERA GREȘEALA: Nu scrie calea lungă, lasă doar numele clasei
     private UserRepository userRepository;
 
     @Autowired
-    private PasswordEncoder passwordEncoder; // Injectăm unealta de criptare
+    private PasswordEncoder passwordEncoder;
 
     public User registerUser(String username, String password) {
         if (userRepository.findByUsername(username).isPresent()) {
@@ -22,8 +24,6 @@ public class UserService {
 
         User newUser = new User();
         newUser.setUsername(username);
-
-        // AICI E SCHIMBAREA: Criptăm parola înainte de salvare
         newUser.setPassword(passwordEncoder.encode(password));
 
         return userRepository.save(newUser);
@@ -33,7 +33,6 @@ public class UserService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User negăsit!"));
 
-        // AICI E SCHIMBAREA: Nu comparăm text cu text, ci verificăm hash-ul
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new RuntimeException("Parolă greșită!");
         }
