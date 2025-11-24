@@ -1,4 +1,4 @@
-package com.example.battleboats.repository;
+package com.example.battleboats.reprository;
 
 import com.example.battleboats.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
