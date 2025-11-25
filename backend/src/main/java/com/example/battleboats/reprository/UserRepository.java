@@ -7,6 +7,7 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
+    Optional<User> findByUsername(String username);
     // Aici Spring va crea automat codul SQL pentru a găsi un user după nume
 
 }

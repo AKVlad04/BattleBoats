@@ -1,20 +1,6 @@
 version: '3.8'
 
 services:
-  app:
-    build: ./backend   # Folderul unde se află Dockerfile-ul aplicației
-    container_name: battleboats_app
-    ports:
-      - "8080:8080"   # Portul aplicației
-    depends_on:
-      - db
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/battleboats
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=secret
-    networks:
-      - battleboats-network
-
   db:
     image: mysql:8.0
     container_name: battleboats_db
