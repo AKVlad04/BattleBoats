@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class UserService {
 
-    @Autowired
+    @com.example.battleboats.service.Autowired
     // AICI ERA GREȘEALA: Nu scrie calea lungă, lasă doar numele clasei
     private UserRepository userRepository;
 
