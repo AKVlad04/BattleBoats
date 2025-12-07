@@ -1,39 +1,35 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ro">
 <head>
     <meta charset="UTF-8">
     <title>Battle Boats - Arena</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="game.css">
 </head>
 <body class="game-layout">
-    <div class="game-container">
-        <div class="header">
-            <div class="top-bar">
-            <button onclick="goBack()" class="btn-back">⬅ Înapoi la Meniu</button>
-             </div>
-            <h2>Faza de Pregătire</h2>
-            <p style="font-size: 0.9em; color: #bdc3c7;">
-                Trage navele pe tablă. 
-                <b>Click Stânga</b> pe navă pentru rotire. 
-                <b>Click Dreapta</b> pentru ștergere.
-            </p>
-            <button id="confirm-btn" onclick="confirmPlacement()" disabled>✅ Gata de Luptă</button>
+<div class="game-container">
+    <div class="header">
+        <div class="top-bar">
+            <button onclick="goBack()" class="btn-back">⬅ Înapoi la Alegere Flotă</button>
         </div>
+        <h2>Faza de Pregătire</h2>
+        <p style="font-size: 0.9em; color: #bdc3c7;">
+            Trage navele pe tablă.
+            <b>Click Dreapta</b> pe o navă plasată pentru a o șterge.
+        </p>
+        <button id="confirm-btn" onclick="confirmPlacement()" disabled>Gata de Luptă</button>
+    </div>
 
-        <div class="setup-area">
-            <div class="board-section">
-                <div id="my-board" class="board"></div>
-            </div>
-        </div>
-
-        <div class="dock-container" id="dock">
-            <div class="ship-preview" draggable="true" data-length="5" id="carrier">⛴️ Carrier (5)</div>
-            <div class="ship-preview" draggable="true" data-length="4" id="battleship">🚢 Battleship (4)</div>
-            <div class="ship-preview" draggable="true" data-length="3" id="cruiser">🛥️ Cruiser (3)</div>
-            <div class="ship-preview" draggable="true" data-length="3" id="submarine">🚤 Submarine (3)</div>
-            <div class="ship-preview" draggable="true" data-length="2" id="destroyer">⛵ Destroyer (2)</div>
+    <div class="setup-area">
+        <div class="board-section">
+            <div id="my-board" class="board"></div>
         </div>
     </div>
-    <script src="game.js"></script>
+
+    <div class="dock-container" id="dock">
+        <p id="loading-ships">Se încarcă flota salvată de pe server...</p>
+    </div>
+</div>
+
+<script src="game.js"></script>
 </body>
 </html>

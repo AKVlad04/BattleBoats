@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <title>Battle Boats - LUPTĂ!</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Stiluri specifice pentru pagina de luptă */
+        .battle-container {
+            display: flex;
+            gap: 50px;
+            justify-content: center;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .player-section {
+            text-align: center;
+        }
+
+        /* Grila adversarului trebuie să arate că poți trage */
+        .enemy-board .grid-cell {
+            cursor: crosshair; /* Cursor în formă de țintă */
+        }
+
+        .enemy-board .grid-cell:hover {
+            background-color: #3498db; /* Luminează la hover */
+        }
+
+        /* Când nu e rândul tău, grila inamică e dezactivată */
+        .disabled-board {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .status-log {
+            margin-top: 20px;
+            padding: 15px;
+            background: #2c3e50;
+            border: 1px solid #7f8c8d;
+            border-radius: 5px;
+            min-height: 50px;
+            width: 80%;
+            text-align: center;
+            font-size: 1.2em;
+            color: #f1c40f; /* Galben */
+            font-weight: bold;
+        }
+
+        h3 { color: #e67e22; margin-bottom: 10px; }
+
+        /* Hit și Miss - culori */
+        .hit { background-color: #e74c3c !important; } /* Roșu */
+        .miss { background-color: #95a5a6 !important; } /* Gri */
+    </style>
+</head>
+<body>
+
+<div class="game-container" style="max-width: 1000px;">
+    <div class="header">
+        <h2>⚔️ ZONA DE RĂZBOI ⚔️</h2>
+    </div>
+
+    <div class="status-log" id="turn-indicator">
+        Se conectează la server...
+    </div>
+
+    <div class="battle-container">
+        <div class="player-section">
+            <h3>Flota Ta</h3>
+            <div id="my-board" class="board"></div>
+        </div>
+
+        <div class="player-section">
+            <h3>Radar Inamic</h3>
+            <div id="enemy-board" class="board enemy-board"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE_URL = 'http://localhost:8080';
+    const GRID_SIZE = 10;
+
+    // Recuperăm datele salvate în pașii anteriori
+    const userId = localStorage.getItem("battleboats_userid");
+    const gameId = localStorage.getItem("current_game_id");
+    let gameActive = false;
+
+    // 1. Inițializare la încărcarea paginii
+    window.onload = function() {
+        if (!userId || !gameId) {
+            alert("Nu ești conectat la un joc! Te trimit la meniu.");
+            window.location.href = "alege-flota.html";
+            return;
+        }
+
+        createGrid('my-board', false);
+        createGrid('enemy-board', true);
+        drawMyShips(); // Desenează navele tale din localStorage
+
+        // Pornim "Polling-ul" (întrebăm serverul la fiecare secundă ce se întâmplă)
+        setInterval(checkGameStatus, 1000);
+    };
+
+    function createGrid(elementId, isEnemy) {
+        const board = document.getElementById(elementId);
+        board.innerHTML = "";
+
+        // Asigurăm stilurile de grilă
+        board.style.display = 'grid';
+        board.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 40px)`;
+        board.style.gridTemplateRows = `repeat(${GRID_SIZE}, 40px)`;
+        board.style.gap = '2px';
+
+        for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
+            const cell = document.createElement("div");
+            cell.classList.add("grid-cell");
+            cell.dataset.index = i;
+
+            // Adăugăm click doar pe tabla inamică
+            if(isEnemy) {
+                cell.onclick = () => handleAttack(i, cell);
+            }
+            board.appendChild(cell);
+        }
+    }
+
+    // 2. Desenează navele tale (mov) ca să știi unde sunt
+    function drawMyShips() {
+        const myShipsData = JSON.parse(localStorage.getItem("my_ships"));
+        if (!myShipsData) return;
+
+        myShipsData.forEach(ship => {
+            if (ship.occupiedIndices) {
+                ship.occupiedIndices.forEach(idx => {
+                    const cell = document.querySelector(`#my-board .grid-cell[data-index='${idx}']`);
+                    if(cell) cell.style.backgroundColor = "#8e44ad"; // Mov
+                });
+            }
+        });
+    }
+
+    // 3. Verifică starea jocului (Polling)
+    async function checkGameStatus() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/game/status?gameId=${gameId}`);
+            if (!response.ok) return;
+
+            const game = await response.json();
+            const statusText = document.getElementById("turn-indicator");
+            const enemyBoard = document.getElementById("enemy-board");
+
+            if (game.status === "WAITING") {
+                statusText.innerText = "⏳ Se așteaptă un adversar... (Trimite-i link-ul!)";
+                statusText.style.color = "#f1c40f"; // Galben
+                enemyBoard.classList.add("disabled-board");
+                return;
+            }
+
+            gameActive = true;
+
+            // Verificăm a cui e rândul
+            if (game.currentTurn === userId) {
+                statusText.innerText = "🟢 ESTE RÂNDUL TĂU! TRAGE!";
+                statusText.style.color = "#2ecc71"; // Verde
+                enemyBoard.classList.remove("disabled-board");
+            } else {
+                statusText.innerText = "🔴 Rândul adversarului. Adăpostește-te!";
+                statusText.style.color = "#e74c3c"; // Roșu
+                enemyBoard.classList.add("disabled-board");
+            }
+
+            // Actualizăm loviturile pe ambele table
+            updateBoardHits(game);
+
+        } catch (error) {
+            console.error("Eroare polling:", error);
+        }
+    }
+
+    function updateBoardHits(game) {
+        // Determină care liste sunt ale cui
+        let myIncomingShots = (userId === game.player1Id) ? game.shotsAtPlayer1 : game.shotsAtPlayer2;
+        let myOutgoingShots = (userId === game.player1Id) ? game.shotsAtPlayer2 : game.shotsAtPlayer1;
+
+        // 1. Lovituri primite (pe tabla ta) - Le facem roșii
+        myIncomingShots.forEach(idx => {
+            const cell = document.querySelector(`#my-board .grid-cell[data-index='${idx}']`);
+            if(cell) {
+                // Dacă era navă acolo (mov), e HIT. Dacă nu, e MISS.
+                // Momentan le facem pe toate roșii pentru simplitate, sau poți verifica culoarea.
+                cell.style.backgroundColor = "#e74c3c";
+                cell.innerText = "💥";
+            }
+        });
+
+        // 2. Lovituri trase de tine (pe tabla inamică) - Le facem gri (Miss) sau Roșii (Hit)
+        // (Serverul ne va spune în viitor dacă e Hit/Miss, momentan le marcăm ca trase)
+        myOutgoingShots.forEach(idx => {
+            const cell = document.querySelector(`#enemy-board .grid-cell[data-index='${idx}']`);
+            if(cell && !cell.classList.contains("miss")) {
+                cell.classList.add("miss");
+                cell.innerText = "❌"; // Marcăm cu X
+            }
+        });
+    }
+
+    // 4. Funcția de Atac
+    async function handleAttack(index, cellElement) {
+        if (!gameActive) return;
+        // Nu trage dacă ai tras deja acolo
+        if (cellElement.classList.contains("miss") || cellElement.classList.contains("hit")) return;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/game/fire?gameId=${gameId}&userId=${userId}&cellIndex=${index}`, {
+                method: 'POST'
+            });
+            const result = await response.json();
+
+            if (result.error) {
+                alert(result.error);
+            } else {
+                // Feedback vizual instant (până vine confirmarea de la server)
+                cellElement.classList.add("miss");
+            }
+        } catch (e) { console.error(e); }
+    }
+</script>
+
+</body>
+</html>

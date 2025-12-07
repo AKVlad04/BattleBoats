@@ -4,30 +4,12 @@
     <meta charset="UTF-8">
     <title>Alege Flota</title>
     <style>
-        /* Un pic de stilizare sa arate bine */
+        /* Stiluri de bază, preluate din conversația anterioară */
         body { background-color: #2c3e50; color: white; font-family: sans-serif; text-align: center; }
         .container { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 20px; }
-
-        .ship-card {
-            border: 2px solid #e67e22;
-            border-radius: 10px;
-            padding: 10px;
-            width: 200px;
-            cursor: pointer;
-            transition: 0.3s;
-            background: #34495e;
-            box-sizing: border-box; /* Asigură că padding-ul și border-ul nu măresc cardul */
-        }
-
+        .ship-card { border: 2px solid #e67e22; border-radius: 10px; padding: 10px; width: 200px; cursor: pointer; transition: 0.3s; background: #34495e; box-sizing: border-box;}
         .ship-card:hover { transform: scale(1.05); }
-
-        /* Cand o nava e selectata, se face verde */
-        .selected {
-            border-color: #2ecc71;
-            background-color: #27ae60;
-            box-shadow: 0 0 15px #2ecc71;
-        }
-
+        .selected { border-color: #2ecc71; background-color: #27ae60; box-shadow: 0 0 15px #2ecc71; }
         img { width: 100%; height: auto; border-radius: 5px; }
     </style>
 </head>
@@ -43,47 +25,38 @@
 <button onclick="saveLoadout()" style="margin-top: 20px; padding: 15px 30px; background: #e67e22; border: none; color: white; font-size: 18px; cursor: pointer;">SALVEAZĂ FLOTA</button>
 
 <script>
-    // --- AICI ESTE LEGAREA CU JAVA ---
-
-    const API_BASE_URL = 'http://localhost:8080'; // Adresa serverului tau Spring Boot
-    let selectedShips = []; // Lista unde tinem minte ce a ales userul
+    const API_BASE_URL = 'http://localhost:8080';
+    let selectedShips = [];
 
     // 1. Cand se deschide pagina, cerem datele de la Java
     window.onload = async function() {
         try {
-            // APEL CORECTAT: Folosim adresa ABSOLUTA pentru API-ul tau
+            // Folosim adresa ABSOLUTA
             const response = await fetch(`${API_BASE_URL}/api/ships`);
 
-            // Verificare pentru erori HTTP (404, 500, etc.)
             if (!response.ok) {
-                // Aruncam o eroare care va fi prinsa in blocul catch
-                throw new Error(`Eroare HTTP: ${response.status} - Verifica logurile serverului Java.`);
+                throw new Error(`Eroare HTTP: ${response.status}`);
             }
 
             const ships = await response.json();
-            displayShips(ships); // Trimitem datele la functia de desenare
+            displayShips(ships);
 
         } catch (error) {
-            console.error("Eroare la incarcarea navelor:", error);
-            // Mesaj de eroare mai util pentru utilizator
+            console.error("Eroare la incarcare:", error);
             document.getElementById('ships-container').innerHTML =
-                `<p style="color: #e74c3c;">❌ Eroare la conexiune: ${error.message}.</p>
-                 <p>Verifică dacă aplicația Spring Boot rulează pe ${API_BASE_URL}.</p>`;
+                `<p style="color: #e74c3c;">❌ Eroare la conexiune. Verifică dacă Spring Boot rulează.</p>`;
         }
     };
 
     // 2. Functia care deseneaza cartonașele
     function displayShips(ships) {
         const container = document.getElementById('ships-container');
-        container.innerHTML = ''; // Curatam mesajul de incarcare
+        container.innerHTML = '';
 
         ships.forEach(ship => {
-            // Cream HTML pentru fiecare nava
             const card = document.createElement('div');
-            // ID-ul navei este stocat ca atribut de date
-            card.dataset.shipId = ship.id;
             card.className = 'ship-card';
-            card.onclick = () => toggleSelection(card, ship.id); // Adaugam click
+            card.onclick = () => toggleSelection(card, ship.id);
 
             card.innerHTML = `
                     <img src="${ship.imageUrl}" alt="${ship.name}">
@@ -97,12 +70,10 @@
 
     // 3. Logica de selectie (Click pe nava)
     function toggleSelection(cardElement, shipId) {
-        // Daca e deja selectata, o scoatem
         if (selectedShips.includes(shipId)) {
             selectedShips = selectedShips.filter(id => id !== shipId);
             cardElement.classList.remove('selected');
         } else {
-            // Daca nu e selectata, verificam sa nu avem deja 4
             if (selectedShips.length >= 4) {
                 alert("Poți alege maxim 4 nave!");
                 return;
@@ -111,14 +82,10 @@
             cardElement.classList.add('selected');
         }
 
-        // Actualizam textul de sus
         document.getElementById('count-display').innerText = `Selectate: ${selectedShips.length} / 4`;
     }
 
-    // 4. Salvarea (doar un test momentan)
-    // ... in fisierul HTML (Alege Flota)
-
-    // 4. Salvarea
+    // 4. Salvarea (Trimite datele la Spring Boot)
     async function saveLoadout() {
         if (selectedShips.length !== 4) {
             alert("Te rog alege exact 4 nave înainte să pleci la luptă!");
@@ -131,19 +98,17 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(selectedShips) // Trimitem lista de ID-uri [1, 5, 7, 9]
+                body: JSON.stringify(selectedShips)
             });
 
             const result = await response.text();
 
             if (response.ok) {
                 alert("Flota salvată cu succes!");
-
-                // REDIRECTIONEAZA la pagina de cautare adversar
+                // Redirecționarea către pagina de așezare (Arena)
                 window.location.href = 'game.html';
             } else {
                 alert(`Eroare la salvare: ${result}`);
-                console.error("Eroare server:", result);
             }
 
         } catch (error) {
