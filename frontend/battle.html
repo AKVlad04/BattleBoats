@@ -53,6 +53,179 @@
         /* Hit și Miss - culori */
         .hit { background-color: #e74c3c !important; } /* Roșu */
         .miss { background-color: #95a5a6 !important; } /* Gri */
+
+        /* Butoane finale */
+        #end-actions {
+            margin: 18px auto 0 auto;
+            display: none;
+            width: fit-content;
+            max-width: none;
+            padding: 0;
+            border-radius: 0;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+
+            display: none;
+            justify-content: center;
+            align-items: center;
+            gap: 14px;
+        }
+
+        #end-actions button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            line-height: 1;
+            padding: 0 18px;
+            height: 46px;
+        }
+
+        /* Banner final (WIN/LOSE) */
+        #end-banner {
+            display: none;
+            margin: 18px auto 10px auto;
+            width: 100%;
+            max-width: 620px;
+            padding: 16px 18px;
+            border-radius: 14px;
+            text-align: center;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+            border: 1px solid rgba(236, 240, 241, 0.14);
+            font-size: 1.45em;
+        }
+        #end-banner.win {
+            background: linear-gradient(135deg, rgba(39, 174, 96, 0.35), rgba(46, 204, 113, 0.18));
+            color: #d5ffea;
+        }
+        #end-banner.lose {
+            background: linear-gradient(135deg, rgba(231, 76, 60, 0.35), rgba(192, 57, 43, 0.18));
+            color: #ffe1de;
+        }
+
+        /* Pulse pe butonul principal */
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.45); }
+            70% { transform: scale(1.02); box-shadow: 0 0 0 12px rgba(46, 204, 113, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+        }
+        #end-actions .btn-save.primary {
+            animation: pulse 1.6s ease-out infinite;
+        }
+
+        /* Animatii micro */
+        @keyframes hitFlash {
+            0% { filter: brightness(1.0); }
+            40% { filter: brightness(1.8); }
+            100% { filter: brightness(1.0); }
+        }
+        .hit-flash {
+            animation: hitFlash 260ms ease-in-out;
+        }
+
+        @keyframes missShake {
+            0% { transform: translateX(0); }
+            20% { transform: translateX(-3px); }
+            40% { transform: translateX(3px); }
+            60% { transform: translateX(-2px); }
+            80% { transform: translateX(2px); }
+            100% { transform: translateX(0); }
+        }
+        .miss-shake {
+            animation: missShake 240ms ease-in-out;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        #end-banner {
+            animation: fadeInUp 260ms ease-out;
+        }
+
+        /* Respectă setarea de accesibilitate */
+        @media (prefers-reduced-motion: reduce) {
+            .hit-flash, .miss-shake, #end-actions .btn-save.primary, #end-banner {
+                animation: none !important;
+            }
+        }
+
+        /* Chat (UI-only, implementare simplă prin polling) */
+        .chat {
+            margin: 14px auto 0 auto;
+            width: 100%;
+            max-width: 520px;
+            background: rgba(44, 62, 80, 0.55);
+            border: 1px solid rgba(236,240,241,0.12);
+            border-radius: 12px;
+            padding: 12px;
+        }
+        .chat-log {
+            max-height: 160px;
+            overflow: auto;
+            text-align: left;
+            padding: 10px;
+            border-radius: 10px;
+            background: rgba(0,0,0,0.18);
+            border: 1px solid rgba(236,240,241,0.10);
+            font-size: 0.95em;
+        }
+        .chat-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .chat-row input {
+            margin: 0;
+        }
+        .chat-row button {
+            width: auto;
+            min-width: 140px;
+            margin-top: 0;
+        }
+
+        @media (max-width: 520px) {
+            #end-actions {
+                flex-direction: column;
+                max-width: 360px;
+            }
+            #end-actions button {
+                width: 100%;
+                min-width: 0;
+            }
+        }
+
+        /* Header aliniere (ambele coloane) */
+        .board-title {
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        /* mic indicator (punct) de tură */
+        .turn-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 1px solid rgba(236,240,241,0.25);
+            background: rgba(149, 165, 166, 0.9); /* neutral */
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.15);
+            display: inline-block;
+        }
+        .turn-dot.yours { background: rgba(46, 204, 113, 0.95); box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.18); }
+        .turn-dot.theirs { background: rgba(231, 76, 60, 0.95); box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.18); }
+        .turn-dot.waiting { background: rgba(241, 196, 15, 0.95); box-shadow: 0 0 0 3px rgba(241, 196, 15, 0.18); }
+
+        /* scoatem badge-ul text (nu-l mai folosim) */
+        .turn-badge { display: none !important; }
+
+        /* End banner + actions polish */
     </style>
 </head>
 <body>
@@ -66,33 +239,124 @@
         Se conectează la server...
     </div>
 
+    <div id="end-banner" class="win">
+        🏆 VICTORIE!
+    </div>
+
     <div class="battle-container">
         <div class="player-section">
-            <h3>Flota Ta</h3>
+            <div class="board-title">
+                <h3 style="margin:0;">Flota Ta</h3>
+            </div>
             <div id="my-board" class="board"></div>
         </div>
 
         <div class="player-section">
-            <h3>Radar Inamic</h3>
+            <div class="board-title">
+                <h3 style="margin:0;">Radar Inamic</h3>
+                <span class="turn-dot" id="turn-dot"></span>
+            </div>
             <div id="enemy-board" class="board enemy-board"></div>
         </div>
     </div>
+
+    <div id="end-actions">
+        <button onclick="window.location.href='menu.html'" class="btn-back">⬅ Back to Menu</button>
+        <button onclick="playAgain()" class="btn-save primary">🔁 Play Again</button>
+    </div>
 </div>
 
+<script src="config.js"></script>
 <script>
-    const API_BASE_URL = 'http://localhost:8080';
+    const API_BASE_URL = window.API_BASE_URL;
     const GRID_SIZE = 10;
+
+    // AUTH GUARD
+    const connectedUser = localStorage.getItem("connectedUser");
+    if (!connectedUser) {
+        window.location.href = "index.html";
+    }
 
     // Recuperăm datele salvate în pașii anteriori
     const userId = localStorage.getItem("battleboats_userid");
     const gameId = localStorage.getItem("current_game_id");
     let gameActive = false;
 
+    // --- AUDIO (mp3) ---
+    // Browserele cer de obicei o actiune a userului (click) inainte sa permita sunet.
+    // Folosim fisiere mp3 in /frontend/sounds/.
+    const sounds = {
+        win: new Audio('sounds/win.mp3'),
+        lose: new Audio('sounds/lose.mp3')
+    };
+    Object.values(sounds).forEach(a => {
+        a.preload = 'auto';
+        a.volume = 0.6;
+    });
+
+    // Optional: log load errors once (helps debugging in console)
+    Object.entries(sounds).forEach(([k, a]) => {
+        a.addEventListener('error', () => console.warn(`Sound failed to load: ${k}`, a.src));
+    });
+
+    let audioUnlocked = false;
+    function unlockAudioOnce() {
+        if (audioUnlocked) return;
+        audioUnlocked = true;
+
+        // "prime" silent pentru a permite ulterior win/lose
+        const a = sounds.win;
+        a.muted = true;
+        a.play().then(() => {
+            a.pause();
+            a.currentTime = 0;
+            a.muted = false;
+        }).catch(() => { a.muted = false; });
+
+        window.removeEventListener('pointerdown', unlockAudioOnce);
+        window.removeEventListener('keydown', unlockAudioOnce);
+    }
+    window.addEventListener('pointerdown', unlockAudioOnce, { once: true });
+    window.addEventListener('keydown', unlockAudioOnce, { once: true });
+
+    function playSound(type) {
+        if (!audioUnlocked) return;
+        const base = sounds[type];
+        if (!base) return;
+        try {
+            const a = new Audio(base.src);
+            a.volume = base.volume;
+            a.currentTime = 0;
+            a.play().catch(() => {});
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    function animateHit(el) {
+        if (!el) return;
+        el.classList.remove('hit-flash');
+        void el.offsetWidth;
+        el.classList.add('hit-flash');
+    }
+
+    function animateMiss(el) {
+        if (!el) return;
+        el.classList.remove('miss-shake');
+        void el.offsetWidth;
+        el.classList.add('miss-shake');
+    }
+
     // 1. Inițializare la încărcarea paginii
     window.onload = function() {
+        if (!connectedUser) {
+            window.location.href = "index.html";
+            return;
+        }
+
         if (!userId || !gameId) {
             alert("Nu ești conectat la un joc! Te trimit la meniu.");
-            window.location.href = "alege-flota.html";
+            window.location.href = "menu.html";
             return;
         }
 
@@ -127,18 +391,38 @@
         }
     }
 
-    // 2. Desenează navele tale (mov) ca să știi unde sunt
-    function drawMyShips() {
+    // 2. Desenează navele tale (cu skins) ca să știi unde sunt
+    async function drawMyShips() {
         const myShipsData = JSON.parse(localStorage.getItem("my_ships"));
         if (!myShipsData) return;
 
-        myShipsData.forEach(ship => {
-            if (ship.occupiedIndices) {
-                ship.occupiedIndices.forEach(idx => {
-                    const cell = document.querySelector(`#my-board .grid-cell[data-index='${idx}']`);
-                    if(cell) cell.style.backgroundColor = "#8e44ad"; // Mov
-                });
+        // luăm skin-urile userului logat
+        let sizeToSkin = { 1: "img/default.png", 2: "img/default.png", 3: "img/default.png", 4: "img/default.png" };
+        try {
+            const skinsResp = await fetch(`${API_BASE_URL}/api/skins/${userId}`);
+            if (skinsResp.ok) {
+                const skins = await skinsResp.json();
+                sizeToSkin = { ...sizeToSkin, ...skins };
             }
+        } catch (e) {
+            console.error("Nu pot încărca skin-urile pentru battle:", e);
+        }
+
+        myShipsData.forEach(ship => {
+            if (!ship.occupiedIndices) return;
+
+            const length = Array.isArray(ship.occupiedIndices) ? ship.occupiedIndices.length : 1;
+            const skinPath = sizeToSkin[length] || "img/default.png";
+
+            ship.occupiedIndices.forEach(idx => {
+                const cell = document.querySelector(`#my-board .grid-cell[data-index='${idx}']`);
+                if (!cell) return;
+
+                cell.style.backgroundImage = `url('${String(skinPath).replace(/'/g, "\\'")}')`;
+                cell.style.backgroundRepeat = "no-repeat";
+                cell.style.backgroundPosition = "center";
+                cell.style.backgroundSize = "contain";
+            });
         });
     }
 
@@ -151,26 +435,65 @@
             const game = await response.json();
             const statusText = document.getElementById("turn-indicator");
             const enemyBoard = document.getElementById("enemy-board");
+            const turnBadge = document.getElementById("turn-dot");
 
             if (game.status === "WAITING") {
                 statusText.innerText = "⏳ Se așteaptă un adversar... (Trimite-i link-ul!)";
                 statusText.style.color = "#f1c40f"; // Galben
                 enemyBoard.classList.add("disabled-board");
+                turnBadge.classList.add("waiting");
+                turnBadge.classList.remove("yours", "theirs");
                 return;
             }
 
-            gameActive = true;
-
             // Verificăm a cui e rândul
-            if (game.currentTurn === userId) {
+            turnBadge.classList.remove('waiting');
+            if (String(game.currentTurn) === String(userId)) {
                 statusText.innerText = "🟢 ESTE RÂNDUL TĂU! TRAGE!";
                 statusText.style.color = "#2ecc71"; // Verde
                 enemyBoard.classList.remove("disabled-board");
+                turnBadge.classList.add("yours");
+                turnBadge.classList.remove("theirs");
             } else {
                 statusText.innerText = "🔴 Rândul adversarului. Adăpostește-te!";
                 statusText.style.color = "#e74c3c"; // Roșu
                 enemyBoard.classList.add("disabled-board");
+                turnBadge.classList.add("theirs");
+                turnBadge.classList.remove("yours");
             }
+
+            // Daca jocul s-a terminat, blocam tot
+            if (game.status === 'FINISHED') {
+                gameActive = false;
+                enemyBoard.classList.add('disabled-board');
+
+                // ascundem complet bara de sus si folosim bannerul de victorie/infrangere
+                statusText.style.display = 'none';
+
+                const banner = document.getElementById('end-banner');
+                banner.style.display = 'block';
+                banner.classList.remove('win', 'lose');
+
+                document.getElementById('turn-dot').classList.remove('yours', 'theirs', 'waiting');
+
+                const winnerIsMe = String(game.winnerId) === String(userId);
+                banner.classList.add(winnerIsMe ? 'win' : 'lose');
+                banner.innerText = winnerIsMe ? '🏆 VICTORIE!' : '💀 ÎNFRÂNGERE!';
+
+                if (!window.__endSoundPlayed) {
+                    window.__endSoundPlayed = true;
+                    playSound(winnerIsMe ? 'win' : 'lose');
+                }
+
+                document.getElementById('end-actions').style.display = 'flex';
+                return;
+            }
+
+            // joc activ -> aratam statusul de tură
+            statusText.style.display = '';
+
+            gameActive = true;
+            window.__endSoundPlayed = false;
 
             // Actualizăm loviturile pe ambele table
             updateBoardHits(game);
@@ -182,27 +505,45 @@
 
     function updateBoardHits(game) {
         // Determină care liste sunt ale cui
-        let myIncomingShots = (userId === game.player1Id) ? game.shotsAtPlayer1 : game.shotsAtPlayer2;
-        let myOutgoingShots = (userId === game.player1Id) ? game.shotsAtPlayer2 : game.shotsAtPlayer1;
+        const iAmP1 = (userId === game.player1Id);
+        const myIncomingShots = iAmP1 ? game.shotsAtPlayer1 : game.shotsAtPlayer2;
+        const myIncomingHits  = iAmP1 ? game.hitsAtPlayer1  : game.hitsAtPlayer2;
 
-        // 1. Lovituri primite (pe tabla ta) - Le facem roșii
-        myIncomingShots.forEach(idx => {
+        const myOutgoingShots = iAmP1 ? game.shotsAtPlayer2 : game.shotsAtPlayer1;
+        const myOutgoingHits  = iAmP1 ? game.hitsAtPlayer2  : game.hitsAtPlayer1;
+
+        const incomingHitSet = new Set(myIncomingHits || []);
+        const outgoingHitSet = new Set(myOutgoingHits || []);
+
+        // 1. Lovituri primite (pe tabla ta)
+        (myIncomingShots || []).forEach(idx => {
             const cell = document.querySelector(`#my-board .grid-cell[data-index='${idx}']`);
-            if(cell) {
-                // Dacă era navă acolo (mov), e HIT. Dacă nu, e MISS.
-                // Momentan le facem pe toate roșii pentru simplitate, sau poți verifica culoarea.
-                cell.style.backgroundColor = "#e74c3c";
-                cell.innerText = "💥";
+            if (!cell) return;
+            if (incomingHitSet.has(idx)) {
+                // daca avem skin (background-image), il facem "deteriorat" (gri)
+                if (cell.style.backgroundImage) {
+                    cell.classList.add('hit-skin');
+                    cell.innerText = '';
+                } else {
+                    cell.classList.add('hit');
+                    cell.innerText = '💥';
+                }
+            } else {
+                cell.classList.add('miss');
+                cell.innerText = '❌';
             }
         });
 
-        // 2. Lovituri trase de tine (pe tabla inamică) - Le facem gri (Miss) sau Roșii (Hit)
-        // (Serverul ne va spune în viitor dacă e Hit/Miss, momentan le marcăm ca trase)
-        myOutgoingShots.forEach(idx => {
+        // 2. Lovituri trase de tine (pe tabla inamică)
+        (myOutgoingShots || []).forEach(idx => {
             const cell = document.querySelector(`#enemy-board .grid-cell[data-index='${idx}']`);
-            if(cell && !cell.classList.contains("miss")) {
-                cell.classList.add("miss");
-                cell.innerText = "❌"; // Marcăm cu X
+            if (!cell) return;
+            if (outgoingHitSet.has(idx)) {
+                cell.classList.add('hit');
+                cell.innerText = '💥';
+            } else {
+                cell.classList.add('miss');
+                cell.innerText = '❌';
             }
         });
     }
@@ -210,23 +551,102 @@
     // 4. Funcția de Atac
     async function handleAttack(index, cellElement) {
         if (!gameActive) return;
-        // Nu trage dacă ai tras deja acolo
-        if (cellElement.classList.contains("miss") || cellElement.classList.contains("hit")) return;
+        if (cellElement.dataset.shot === '1') return;
 
         try {
             const response = await fetch(`${API_BASE_URL}/api/game/fire?gameId=${gameId}&userId=${userId}&cellIndex=${index}`, {
                 method: 'POST'
             });
-            const result = await response.json();
+
+            // Daca backend intoarce 403/500, uneori body-ul e gol => response.json() crapa.
+            const raw = await response.text();
+            let result = {};
+            if (raw) {
+                try { result = JSON.parse(raw); } catch { result = { error: raw }; }
+            }
+
+            if (!response.ok) {
+                if (response.status === 500) {
+                    const msg = result.error || 'Eroare server (500). Verifică să ruleze backend-ul corect (Spring Boot 3 necesită Java 17).';
+                    alert(msg);
+                    return;
+                }
+                if (response.status === 403) {
+                    alert('Momentan serverul refuză acțiunea (403). Reîncearcă în 1-2 secunde.');
+                    return;
+                }
+                const msg = result.error || `Eroare server (${response.status})`;
+                alert(msg);
+                return;
+            }
 
             if (result.error) {
                 alert(result.error);
-            } else {
-                // Feedback vizual instant (până vine confirmarea de la server)
-                cellElement.classList.add("miss");
+                return;
             }
-        } catch (e) { console.error(e); }
+
+            cellElement.dataset.shot = '1';
+
+            if (result.hit) {
+                cellElement.classList.add('hit');
+                cellElement.innerText = '💥';
+                animateHit(cellElement);
+            } else {
+                cellElement.classList.add('miss');
+                cellElement.innerText = '❌';
+                animateMiss(cellElement);
+            }
+
+            if (result.gameStatus === 'FINISHED') {
+                const statusText = document.getElementById('turn-indicator');
+                const enemyBoard = document.getElementById('enemy-board');
+                enemyBoard.classList.add('disabled-board');
+                statusText.style.display = 'none';
+
+                const banner = document.getElementById('end-banner');
+                banner.style.display = 'block';
+                banner.classList.remove('win', 'lose');
+
+                document.getElementById('turn-dot').classList.remove('yours', 'theirs', 'waiting');
+
+                const winnerIsMe = String(result.winnerId) === String(userId);
+                banner.classList.add(winnerIsMe ? 'win' : 'lose');
+                banner.innerText = winnerIsMe ? '🏆 VICTORIE!' : '💀 ÎNFRÂNGERE!';
+
+                playSound(winnerIsMe ? 'win' : 'lose');
+
+                gameActive = false;
+                document.getElementById('end-actions').style.display = 'flex';
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Eroare conexiune server!');
+        }
     }
+
+    async function leaveGameOnServer() {
+        if (!gameId || !userId) return;
+        try {
+            await fetch(`${API_BASE_URL}/api/game/leave?gameId=${encodeURIComponent(gameId)}&userId=${encodeURIComponent(userId)}`, { method: 'POST' });
+        } catch (e) {
+            console.warn('leave failed', e);
+        }
+    }
+
+    function playAgain() {
+        // curatam starea jocului curent
+        leaveGameOnServer();
+        localStorage.removeItem('current_game_id');
+        localStorage.removeItem('my_ships');
+        window.location.href = 'game.html';
+    }
+
+    // Back to menu should also cleanup server state
+    document.querySelector('#end-actions .btn-back')?.addEventListener('click', () => {
+        leaveGameOnServer();
+    });
+
+
 </script>
 
 </body>

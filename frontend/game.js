@@ -1,9 +1,12 @@
 // --- CONSTANTE ȘI STARE GLOBALĂ ---
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = (window.API_BASE_URL || 'http://localhost:8081');
 const dockElement = document.getElementById('dock');
 const boardElement = document.getElementById('my-board');
 const confirmBtn = document.getElementById("confirm-btn");
 const GRID_SIZE = 10;
+
+// culoarea apei, folosită când resetăm celule
+const WATER_COLOR = "#2980b9";
 
 // Stare globală D&D
 const placedShips = [];
@@ -13,15 +16,35 @@ let isDraggingFromBoard = false;
 let dragOffset = 0;
 let draggedShipOrientation = true; // true = horizontal
 
-// --- 1. GENERARE ID UTILIZATOR (MULTIPLAYER) ---
-let userId = localStorage.getItem("battleboats_userid");
-if (!userId) {
-    userId = "user_" + Math.random().toString(36).substr(2, 9);
+// --- AUTH GUARD (nu permitem acces fara login) ---
+const connectedUser = localStorage.getItem("connectedUser");
+if (!connectedUser) {
+    window.location.href = "index.html";
+}
+
+// --- 1. IDENTITATE UTILIZATOR (folosim ID-ul din DB) ---
+let userId = null;
+
+async function initUserIdFromLogin() {
+    if (!connectedUser) return;
+    const res = await fetch(`${API_BASE_URL}/api/auth/user/${connectedUser}`);
+    if (!res.ok) throw new Error("Nu pot încărca user-ul logat");
+    const userData = await res.json();
+    userId = String(userData.id);
     localStorage.setItem("battleboats_userid", userId);
 }
 
 // --- INIȚIALIZARE ---
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    try {
+        await initUserIdFromLogin();
+    } catch (e) {
+        console.error(e);
+        localStorage.removeItem("connectedUser");
+        window.location.href = "index.html";
+        return;
+    }
+
     createBoard();
     fetchAndDisplaySavedShips();
 });
@@ -46,29 +69,51 @@ function createBoard() {
     }
 }
 
-// 2. Funcția de Conectare la Spring Boot (Aduce navele din DB)
+// 2. Navele standard pentru toți jucătorii
 async function fetchAndDisplaySavedShips() {
-    try {
-        const loadoutResponse = await fetch(`${API_BASE_URL}/api/ships/loadout`);
-        const savedIds = await loadoutResponse.json();
+    // Nave fixe: 4x1, 3x2, 2x3, 1x4 blocuri
+    const standardShips = [
+        { id: 1, name: "Barcă 1", size: 1 },
+        { id: 2, name: "Barcă 2", size: 1 },
+        { id: 3, name: "Barcă 3", size: 1 },
+        { id: 4, name: "Barcă 4", size: 1 },
+        { id: 5, name: "Distrugător 1", size: 2 },
+        { id: 6, name: "Distrugător 2", size: 2 },
+        { id: 7, name: "Distrugător 3", size: 2 },
+        { id: 8, name: "Crucișător 1", size: 3 },
+        { id: 9, name: "Crucișător 2", size: 3 },
+        { id: 10, name: "Portavion", size: 4 }
+    ];
 
-        if (savedIds.length !== 4) {
-            dockElement.innerHTML = `<p style='color: #e74c3c;'>Flota incompletă. <a href='alege-flota.html'>Alege 4 nave.</a></p>`;
-            return;
+    // Obținem username-ul din localStorage
+    const username = localStorage.getItem("connectedUser");
+    let userSkins = {};
+
+    if (username) {
+        try {
+            // Obținem ID-ul userului din backend
+            const userResponse = await fetch(`${API_BASE_URL}/api/auth/user/${username}`);
+            if (userResponse.ok) {
+                const userData = await userResponse.json();
+                const userIdFromDB = userData.id;
+
+                // Obținem skin-urile userului
+                const skinsResponse = await fetch(`${API_BASE_URL}/api/skins/${userIdFromDB}`);
+                if (skinsResponse.ok) {
+                    userSkins = await skinsResponse.json();
+                }
+            }
+        } catch (error) {
+            console.error("Eroare la încărcarea skin-urilor:", error);
         }
-
-        const allShipsResponse = await fetch(`${API_BASE_URL}/api/ships`);
-        const allShips = await allShipsResponse.json();
-
-        // Filtrează navele salvate
-        const savedShips = allShips.filter(ship => savedIds.includes(ship.id));
-
-        displayShipsInDock(savedShips);
-
-    } catch (error) {
-        console.error("Eroare la încărcarea flotei:", error);
-        dockElement.innerHTML = `<p style='color: #e74c3c;'>Eroare de rețea. Serverul Java nu răspunde.</p>`;
     }
+
+    // Atașăm skin-urile la nave
+    standardShips.forEach(ship => {
+        ship.skinPath = userSkins[ship.size] || "img/default.png";
+    });
+
+    displayShipsInDock(standardShips);
 }
 
 // 3. Afișează navele în Dock
@@ -83,8 +128,13 @@ function displayShipsInDock(ships) {
         shipDiv.id = `ship-${ship.id}`;
         shipDiv.dataset.length = ship.size;
         shipDiv.dataset.id = ship.id.toString();
+        shipDiv.dataset.skinPath = ship.skinPath || "img/default.png";
 
-        shipDiv.innerHTML = `${ship.name} (${ship.size})`;
+        // In dock afisam doar skin-ul, repetat pe lungime (ship.size)
+        const skinPath = shipDiv.dataset.skinPath;
+        shipDiv.innerHTML = `
+            <div class="ship-skin" style="--ship-len:${ship.size}; --skin-url:url('${skinPath.replace(/'/g, "\\'")}')"></div>
+        `;
 
         // --- Logica DragStart ---
         shipDiv.addEventListener("dragstart", (e) => {
@@ -167,7 +217,10 @@ function handleDragEnd(e) {
 // --- GESTIONARE NAVE PE TABLĂ ---
 
 function placeShipOnBoard(id, length, indices, isHorizontal) {
-    placedShips.push({ id, length, isHorizontal, indices });
+    const dockShip = document.getElementById(`ship-${id}`);
+    const skinPath = dockShip?.dataset?.skinPath || "img/default.png";
+
+    placedShips.push({ id, length, isHorizontal, indices, skinPath });
 
     indices.forEach((idx, i) => {
         const cell = getCell(idx);
@@ -175,6 +228,13 @@ function placeShipOnBoard(id, length, indices, isHorizontal) {
         cell.classList.add("ship-cell");
         cell.setAttribute("draggable", "true");
         cell.dataset.shipId = id;
+        cell.dataset.skinPath = skinPath;
+
+        // Punem skin-ul ca background pe fiecare celulă (se repetă natural pe toată nava)
+        cell.style.backgroundImage = `url('${skinPath.replace(/'/g, "\\'")}')`;
+        cell.style.backgroundRepeat = "no-repeat";
+        cell.style.backgroundPosition = "center";
+        cell.style.backgroundSize = "contain";
 
         // DRAG START DE PE TABLĂ
         cell.addEventListener("dragstart", (e) => {
@@ -206,7 +266,6 @@ function placeShipOnBoard(id, length, indices, isHorizontal) {
         };
     });
 
-    const dockShip = document.getElementById(`ship-${id}`);
     if(dockShip) dockShip.style.display = "none";
 
     checkGameReady();
@@ -232,6 +291,14 @@ function removeShipUI(shipId) {
             c.classList.remove("ship-cell", "ship-dragging");
             c.removeAttribute("draggable");
             delete c.dataset.shipId;
+            delete c.dataset.skinPath;
+
+            // resetăm imaginea + culoarea de apă
+            c.style.backgroundImage = "";
+            c.style.backgroundRepeat = "";
+            c.style.backgroundPosition = "";
+            c.style.backgroundSize = "";
+            c.style.backgroundColor = WATER_COLOR;
 
             // Resetăm listenerii prin clonare
             const newC = c.cloneNode(true);
@@ -321,7 +388,7 @@ function getCell(index) {
 }
 
 function checkGameReady() {
-    const expectedShips = 4;
+    const expectedShips = 10; // 4x1 + 3x2 + 2x3 + 1x4 = 10 nave
 
     if (placedShips.length === expectedShips) {
         confirmBtn.disabled = false;
@@ -338,12 +405,12 @@ function checkGameReady() {
 
 function goBack() {
     if (placedShips.length > 0 && !confirm("Vrei să ieși? Vei pierde aranjamentul navelor.")) return;
-    window.location.href = "alege-flota.html";
+    window.location.href = "menu.html";
 }
 
 // --- 4. TRIMITERE LA SERVER (MULTIPLAYER JOIN) ---
 async function confirmPlacement() {
-    if (placedShips.length !== 4) return;
+    if (placedShips.length !== 10) return;
 
     const placementData = placedShips.map(ship => ({
         shipId: ship.id,

@@ -2,9 +2,8 @@ package com.example.battleboats.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,18 +20,12 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        // Pentru acest proiect, API-ul este accesat din frontend static si nu folosim cookie/session auth.
+        // Dezactivam complet Spring Security pentru a evita 403 (inclusiv pe preflight/POST).
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(Customizer.withDefaults())
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/ships/**").permitAll()
-                        .requestMatchers("/api/setup/**").permitAll()
-                        // LINIE NOUĂ: Permite multiplayer-ul
-                        .requestMatchers("/api/game/**").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/", "/index.html", "/alege-flota.html", "/game.html", "/battle.html", "/style.css", "/js/**", "/images/**").permitAll()
-                        .anyRequest().authenticated()
-                );
+                .cors(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
 
         return http.build();
     }

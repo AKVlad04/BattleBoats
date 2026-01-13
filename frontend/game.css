@@ -128,11 +128,12 @@ button {
 
 /* Celula ocupată de o navă plasată (Mov) */
 .ship-cell {
-    background-color: #8e44ad !important; /* Mov */
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    /* Permitem skin-ului (setat din JS ca background-image) sa fie vizibil */
+    background-color: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.35);
     box-sizing: border-box;
     cursor: context-menu; /* Cursor special pentru click-dreapta */
-    box-shadow: inset 0 0 5px rgba(0,0,0,0.3);
+    box-shadow: inset 0 0 6px rgba(0,0,0,0.35);
 }
 
 /* --- 5. DOCK (ZONA DE JOS CU NAVELE) --- */
@@ -150,35 +151,52 @@ button {
     border: 2px dashed #7f8c8d; /* Bordură punctată pentru a sugera "drop zone" */
 }
 
+/* In dock vrem doar skin-ul vizibil (fara text / fundal portocaliu) */
 .ship-preview {
-    background-color: #d35400; /* Portocaliu închis */
-    color: white;
-    padding: 8px 15px;
-    border-radius: 5px;
+    background-color: transparent;
+    padding: 0;
+    border-radius: 8px;
     cursor: grab;
-    font-weight: bold;
-    border: 1px solid #e67e22;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    border: none;
+    box-shadow: none;
     user-select: none;
     transition: transform 0.1s;
+    width: auto;
+    height: auto;
+    display: inline-block;
 }
 
 .ship-preview:hover {
-    background-color: #e67e22; /* Portocaliu mai deschis la hover */
+    background-color: transparent;
+    transform: translateY(-1px);
 }
 
 .ship-preview:active {
-    cursor: grabbing; /* Mânuță închisă când tragi */
-    transform: scale(0.95);
+    cursor: grabbing;
+    transform: scale(0.97);
 }
 
-/* Clasa pentru a ascunde nava din dock în timp ce o tragi */
-.hidden {
-    display: none !important;
+/* Container-ul pe care îl construim în game.js */
+.ship-skin {
+    --cell: 40px; /* trebuie sa fie egal cu dimensiunea celulei din board (.grid-cell) */
+    width: calc(var(--cell) * var(--ship-len));
+    height: var(--cell);
+
+    background-image: var(--skin-url);
+    background-repeat: repeat-x;
+    background-position: center;
+    background-size: var(--cell) var(--cell);
+
+    border-radius: 6px;
 }
 
 #loading-ships {
     font-style: italic;
     color: #95a5a6;
     margin: 0;
+}
+
+/* --- 6. EFECTE VIZUALE PENTRU LOVITURI --- */
+.grid-cell.hit-skin {
+    filter: grayscale(1) brightness(0.75);
 }

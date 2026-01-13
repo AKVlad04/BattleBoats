@@ -1,4 +1,3 @@
-
 package com.example.battleboats.model;
 
 import jakarta.persistence.*;
@@ -16,7 +15,10 @@ public class User {
 
     private String password;
 
-    private int score;
+    // statistici persistente
+    private int gamesPlayed;
+
+    private int wins;
 
     // --- CONSTRUCTORI ---
     public User() {
@@ -25,7 +27,8 @@ public class User {
     public User(String username, String password) {
         this.username = username;
         this.password = password;
-        this.score = 0;
+        this.gamesPlayed = 0;
+        this.wins = 0;
     }
 
     // --- GETTERS și SETTERS (Le scriem manual ca să nu mai avem erori) ---
@@ -54,11 +57,20 @@ public class User {
         this.password = password;
     }
 
-    public int getScore() {
-        return score;
+
+    public int getGamesPlayed() {
+        return gamesPlayed;
     }
 
-    public void setScore(int score) {
-        this.score = score;
+    public void setGamesPlayed(int gamesPlayed) {
+        this.gamesPlayed = gamesPlayed;
+    }
+
+    public int getWins() {
+        return wins;
+    }
+
+    public void setWins(int wins) {
+        this.wins = wins;
     }
 }

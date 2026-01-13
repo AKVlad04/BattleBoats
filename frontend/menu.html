@@ -12,11 +12,14 @@
         
         <div class="menu-buttons">
             <button onclick="startGame()" class="btn-large">⚔️ Caută Adversar</button>
-            <button onclick="window.location.href='loadout.html'" class="btn-secondary">🎨 Personalizare Nave</button>
+            <button onclick="window.location.href='skins.html'" class="btn-secondary">🎨 Personalizare Nave</button>
+            <button onclick="window.location.href='stats.html'" class="btn-secondary">📊 Statistici</button>
+            <button onclick="window.location.href='leaderboard.html'" class="btn-secondary">🏆 Leaderboard</button>
             <button onclick="logout()" class="btn-danger">🚪 Log out</button>
         </div>
     </div>
 
+    <script src="config.js"></script>
     <script>
         const user = localStorage.getItem("connectedUser");
         if(!user) window.location.href = "index.html";
@@ -32,6 +35,9 @@
 
         function logout() {
             localStorage.removeItem("connectedUser");
+            localStorage.removeItem("battleboats_userid");
+            localStorage.removeItem("current_game_id");
+            localStorage.removeItem("my_ships");
             window.location.href = "index.html";
         }
     </script>

@@ -5,12 +5,14 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.Arrays;
 import java.util.List;
 
 @Configuration
-public class WebConfig {
+public class WebConfig implements WebMvcConfigurer {
 
     @Bean
     public CorsFilter corsFilter() {
@@ -21,7 +23,8 @@ public class WebConfig {
         config.setAllowedOriginPatterns(List.of("*"));
 
         // Permite cookie-uri și autentificare
-        config.setAllowCredentials(true);
+        // Pentru acest proiect folosim auth in localStorage, nu cookies, deci nu avem nevoie de credentials.
+        config.setAllowCredentials(false);
 
         // Permite orice tip de header și metodă (GET, POST, etc.)
         config.setAllowedHeaders(Arrays.asList("Origin", "Content-Type", "Accept", "Authorization"));
@@ -29,5 +32,12 @@ public class WebConfig {
 
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
+    }
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // Serveste imaginile din folderul de la radacina proiectului: <repo>/img
+        registry.addResourceHandler("/img/**")
+                .addResourceLocations("file:./img/");
     }
 }

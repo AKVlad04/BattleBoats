@@ -3,11 +3,13 @@ package com.example.battleboats.reprository;
 import com.example.battleboats.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+
+import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUsername(String username);
-    // Aici Spring va crea automat codul SQL pentru a găsi un user după nume
 
+    List<User> findTop10ByOrderByWinsDescGamesPlayedDescUsernameAsc();
 }

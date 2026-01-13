@@ -42,4 +42,14 @@ public class AuthController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @GetMapping("/user/{username}")
+    public ResponseEntity<?> getUserByUsername(@PathVariable String username) {
+        try {
+            User user = userService.findByUsername(username);
+            return ResponseEntity.ok(user);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }

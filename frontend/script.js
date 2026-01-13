@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:8080/api/auth";
+const API_URL = (window.API_BASE_URL || 'http://localhost:8081') + '/api/auth';
 
 async function register() {
     const username = document.getElementById("reg-username").value;
@@ -25,7 +25,8 @@ async function register() {
         }
 
     } catch (error) {
-        messageBox.innerText = "Eroare conexiune server! Java rulează?";
+        messageBox.style.color = "#e74c3c";
+        messageBox.innerText = `Eroare conexiune: ${error.message}`;
     }
 }
 
@@ -62,6 +63,7 @@ async function login() {
             messageBox.innerText = "Login eșuat: " + text;
         }
     } catch (error) {
-        messageBox.innerText = "Eroare conexiune server!";
+        messageBox.style.color = "#e74c3c";
+        messageBox.innerText = `Eroare conexiune: ${error.message}`;
     }
 }

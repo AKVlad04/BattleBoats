@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <title>Battle Boats - Leaderboard</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .lb-card {
+            background: #34495e;
+            border-radius: 14px;
+            padding: 22px;
+            width: min(920px, calc(100% - 32px));
+            box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+            overflow: hidden;
+            border-radius: 10px;
+        }
+
+        th, td {
+            padding: 12px 10px;
+            border-bottom: 1px solid rgba(236,240,241,0.12);
+            text-align: left;
+        }
+
+        th {
+            background: #2c3e50;
+            color: #f1c40f;
+            font-weight: 800;
+        }
+
+        tr:nth-child(even) td { background: rgba(0,0,0,0.08); }
+
+        .rank {
+            width: 60px;
+            font-weight: 900;
+        }
+
+        .muted { color: #bdc3c7; }
+        #error { color: #e74c3c; font-weight: bold; margin-top: 12px; }
+    </style>
+</head>
+<body class="centered-layout">
+
+<div class="lb-card">
+    <button onclick="window.location.href='menu.html'" class="btn-back">⬅ Înapoi la Meniu</button>
+    <h1 style="text-align:center; margin: 12px 0 4px 0;">🏆 Leaderboard</h1>
+    <p class="muted" style="text-align:center; margin: 0;">Sortat după wins, win rate, meciuri jucate</p>
+
+    <div id="error"></div>
+
+    <table>
+        <thead>
+        <tr>
+            <th class="rank">#</th>
+            <th>Username</th>
+            <th>Wins</th>
+            <th>Losses</th>
+            <th>Games</th>
+            <th>Win rate</th>
+        </tr>
+        </thead>
+        <tbody id="rows">
+        <tr><td colspan="6" class="muted">Se încarcă...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script src="config.js"></script>
+<script>
+    const API_BASE_URL = window.API_BASE_URL;
+
+    const connectedUser = localStorage.getItem('connectedUser');
+    if (!connectedUser) {
+        window.location.href = 'index.html';
+    }
+
+    async function loadLeaderboard() {
+        try {
+            const resp = await fetch(`${API_BASE_URL}/api/leaderboard`);
+            if (!resp.ok) {
+                const body = await resp.text();
+                throw new Error(`HTTP ${resp.status}: ${body}`);
+            }
+
+            const list = await resp.json();
+            const tbody = document.getElementById('rows');
+            tbody.innerHTML = '';
+
+            list.forEach((e, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="rank">${idx + 1}</td>
+                    <td>${e.username}</td>
+                    <td>${e.wins}</td>
+                    <td>${e.losses}</td>
+                    <td>${e.gamesPlayed}</td>
+                    <td>${Number(e.winRate).toFixed(1)}%</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="muted">Nu există date încă.</td></tr>`;
+            }
+        } catch (e) {
+            console.error(e);
+            document.getElementById('error').innerText = `❌ Nu pot încărca leaderboard: ${e.message}`;
+        }
+    }
+
+    loadLeaderboard();
+</script>
+
+</body>
+</html>
+
