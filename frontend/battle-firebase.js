@@ -406,4 +406,72 @@ export async function startBattlePage() {
   });
 
   async function handleAttack(index, cellElement) {
-    if
+    if (cellElement.dataset.shot === '1') return;
+
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(gameRef);
+      if (!snap.exists()) throw new Error('Joc inexistent');
+      const game = snap.data();
+
+      if (game.status === 'finished') return;
+      if (!hasBothPlayers(game)) throw new Error('Nu există încă adversar');
+
+      const oppUid = getOpponentUid(game, myUid);
+      if (!oppUid) throw new Error('Adversar invalid');
+
+      // Don't allow play until both sides placed ships; avoids swapping turns to a "ghost".
+      if (!hasPlacement(game, myUid) || !hasPlacement(game, oppUid)) {
+        throw new Error('Se așteaptă plasarea navelor...');
+      }
+
+      if (!isMyTurn(game, myUid)) throw new Error('Nu este rândul tău');
+
+      const myShots = safeArr(game?.shots?.[myUid]);
+      if (myShots.includes(index)) return;
+
+      // determine hit by checking opponent placements
+      const oppPlacement = game?.placements?.[oppUid];
+      const oppOcc = flattenPlacementToOccupiedSet(oppPlacement);
+      const hit = oppOcc.has(index);
+
+      const updates = {
+        updatedAt: serverTimestamp(),
+        [`shots.${myUid}`]: arrayUnion(index),
+      };
+
+      if (hit) {
+        updates[`hits.${myUid}`] = arrayUnion(index);
+      }
+
+      // Check win condition: all opponent occupied indices are hit by me
+      const prevHits = safeArr(game?.hits?.[myUid]);
+      const newMyHitsSet = new Set(prevHits);
+      if (hit) newMyHitsSet.add(index);
+
+      const allOpp = Array.from(oppOcc);
+      const iWon = allOpp.length > 0 && allOpp.every(v => newMyHitsSet.has(v));
+
+      if (iWon) {
+        updates.status = 'finished';
+        updates.winnerUid = myUid;
+      } else {
+        // Battleship rule: if you HIT, you keep shooting; only switch on MISS.
+        if (!hit) {
+          updates.currentTurnUid = oppUid;
+        }
+      }
+
+      tx.update(gameRef, updates);
+    }).catch((e) => {
+      console.warn('Attack error:', e);
+      // optional: show status
+      statusText.innerText = `⚠️ ${e.message || e}`;
+      statusText.style.color = '#f1c40f';
+      setTimeout(() => {
+        // status will refresh from snapshot
+      }, 600);
+    });
+
+    cellElement.dataset.shot = '1';
+  }
+}
