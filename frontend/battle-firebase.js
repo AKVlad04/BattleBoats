@@ -55,6 +55,32 @@ function hasBothPlayers(game) {
   return Boolean(game?.player1?.uid) && Boolean(game?.player2?.uid);
 }
 
+function hasPlacement(game, uid) {
+  const p = game?.placements?.[uid];
+  return Array.isArray(p) && p.length > 0;
+}
+
+function updateShotsUI(game, myUid) {
+  const enemyBoard = document.getElementById('enemy-board');
+  const myShots = toSet(game?.shots?.[myUid]);
+  const myHits = toSet(game?.hits?.[myUid]);
+
+  enemyBoard?.querySelectorAll('.grid-cell').forEach((cell) => {
+    const idx = Number(cell.dataset.index);
+    const shot = myShots.has(idx);
+    const hit = myHits.has(idx);
+
+    cell.classList.toggle('hit', shot && hit);
+    cell.classList.toggle('miss', shot && !hit);
+
+    if (shot) {
+      cell.dataset.shot = '1';
+    } else {
+      delete cell.dataset.shot;
+    }
+  });
+}
+
 function isParticipant(game, myUid) {
   return String(game?.player1?.uid || '') === String(myUid) || String(game?.player2?.uid || '') === String(myUid);
 }
@@ -206,21 +232,31 @@ export async function startBattlePage() {
       return;
     }
 
+    const oppUid = getOpponentUid(game, myUid);
+    // Still waiting until we can identify opponent AND both have placements.
+    if (!oppUid || !hasPlacement(game, myUid) || !hasPlacement(game, oppUid)) {
+      setWaitingUI();
+      // still update UI with whatever shots exist
+      updateShotsUI(game, myUid);
+      return;
+    }
+
     if (!game?.currentTurnUid) {
       setWaitingUI();
+      updateShotsUI(game, myUid);
       return;
     }
 
     if (game.status === 'finished') {
       showFinished(game);
-      updateShotsUI(game);
+      updateShotsUI(game, myUid);
       return;
     }
 
     if (isMyTurn(game, myUid)) setMyTurnUI();
     else setTheirTurnUI();
 
-    updateShotsUI(game);
+    updateShotsUI(game, myUid);
   });
 
   async function handleAttack(index, cellElement) {
@@ -234,10 +270,15 @@ export async function startBattlePage() {
       if (game.status === 'finished') return;
       if (!hasBothPlayers(game)) throw new Error('Nu există încă adversar');
 
-      if (!isMyTurn(game, myUid)) throw new Error('Nu este rândul tău');
-
       const oppUid = getOpponentUid(game, myUid);
       if (!oppUid) throw new Error('Adversar invalid');
+
+      // Don't allow play until both sides placed ships; avoids swapping turns to a "ghost".
+      if (!hasPlacement(game, myUid) || !hasPlacement(game, oppUid)) {
+        throw new Error('Se așteaptă plasarea navelor...');
+      }
+
+      if (!isMyTurn(game, myUid)) throw new Error('Nu este rândul tău');
 
       const myShots = safeArr(game?.shots?.[myUid]);
       if (myShots.includes(index)) return;

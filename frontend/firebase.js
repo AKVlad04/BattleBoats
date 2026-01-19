@@ -210,7 +210,13 @@ export async function joinOrCreateGame(uid, username, placementData) {
   return await runTransaction(db, async (tx) => {
     const qSnap = await tx.get(queueRef);
     const qData = qSnap.exists() ? (qSnap.data() || {}) : {};
-    const waiting = qData.waiting || null;
+    let waiting = qData.waiting || null;
+
+    // Sanity: if waiting entry is missing required fields, ignore it.
+    if (waiting && (!waiting.uid || !Array.isArray(waiting.placementData) || waiting.placementData.length === 0)) {
+      tx.set(queueRef, { waiting: null, updatedAt: serverTimestamp() }, { merge: true });
+      waiting = null;
+    }
 
     // If queue entry is stale (e.g., user closed tab), clear it.
     // Firestore Timestamp can be missing on first write, so guard everything.
@@ -218,10 +224,9 @@ export async function joinOrCreateGame(uid, username, placementData) {
       const enq = waiting?.enqueuedAt;
       const ms = enq && typeof enq.toMillis === 'function' ? enq.toMillis() : null;
       const MAX_WAIT_MS = 2 * 60 * 1000; // 2 minutes
-      if (waiting && ms && Date.now() - ms > MAX_WAIT_MS) {
+      if (waiting && (!ms || Date.now() - ms > MAX_WAIT_MS)) {
         tx.set(queueRef, { waiting: null, updatedAt: serverTimestamp() }, { merge: true });
-        // treat as empty queue
-        return { gameId: null, status: 'waiting' };
+        waiting = null;
       }
     } catch {
       // ignore and proceed
