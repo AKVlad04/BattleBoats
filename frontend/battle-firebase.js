@@ -85,6 +85,19 @@ function isParticipant(game, myUid) {
   return String(game?.player1?.uid || '') === String(myUid) || String(game?.player2?.uid || '') === String(myUid);
 }
 
+function isGamePlayableForUser(game, myUid) {
+  if (!hasBothPlayers(game)) return false;
+  const oppUid = getOpponentUid(game, myUid);
+  if (!oppUid) return false;
+  if (!hasPlacement(game, myUid)) return false;
+  if (!hasPlacement(game, oppUid)) return false;
+  if (!game?.currentTurnUid) return false;
+  // currentTurnUid must be one of the two players
+  const t = String(game.currentTurnUid);
+  if (t !== String(myUid) && t !== String(oppUid)) return false;
+  return true;
+}
+
 export async function startBattlePage() {
   const connectedUser = localStorage.getItem('connectedUser');
   if (!connectedUser) {
@@ -137,6 +150,26 @@ export async function startBattlePage() {
   await waitForAuthReady(3000);
 
   const gameRef = doc(db, 'games', gameId);
+
+  // If we detect a stale/ghost game, self-heal by clearing local storage and sending back to menu.
+  let didAutoLeave = false;
+  function autoLeaveToMenu(reason) {
+    if (didAutoLeave) return;
+    didAutoLeave = true;
+
+    console.warn('Auto-leaving stale game:', reason, { myUid, gameId });
+    try {
+      localStorage.removeItem('current_game_id');
+    } catch {}
+
+    statusText.innerText = reason || 'Joc invalid. Te trimit la meniu.';
+    statusText.style.color = '#f1c40f';
+    enemyBoard.classList.add('disabled-board');
+
+    setTimeout(() => {
+      window.location.href = 'menu.html';
+    }, 900);
+  }
 
   // Load my skins once for drawing my ships
   let sizeToSkin = { 1: 'img/default.png', 2: 'img/default.png', 3: 'img/default.png', 4: 'img/default.png' };
@@ -199,6 +232,9 @@ export async function startBattlePage() {
   createGrid('enemy-board', true);
 
   // Subscribe to game changes
+  let nonPlayableSinceMs = null;
+  const NON_PLAYABLE_GRACE_MS = 6000; // wait a bit for Firestore to sync before treating as stale
+
   onSnapshot(gameRef, (snap) => {
     if (!snap.exists()) {
       statusText.innerText = 'Jocul nu există.';
@@ -228,9 +264,36 @@ export async function startBattlePage() {
 
     // waiting for second player
     if (!hasBothPlayers(game)) {
+      nonPlayableSinceMs = null;
       setWaitingUI();
       return;
     }
+
+    // If we have both players, but game isn't playable for too long, it's likely stale.
+    if (!isGamePlayableForUser(game, myUid)) {
+      if (nonPlayableSinceMs == null) nonPlayableSinceMs = Date.now();
+
+      const oppUid = getOpponentUid(game, myUid);
+      if (!oppUid || !hasPlacement(game, myUid) || !hasPlacement(game, oppUid) || !game?.currentTurnUid) {
+        setWaitingUI();
+        updateShotsUI(game, myUid);
+
+        if (Date.now() - nonPlayableSinceMs > NON_PLAYABLE_GRACE_MS) {
+          autoLeaveToMenu('Nu am găsit un adversar valid. Reîncearcă matchmaking.');
+        }
+        return;
+      }
+
+      // Other inconsistency (e.g., currentTurnUid not one of players)
+      if (Date.now() - nonPlayableSinceMs > NON_PLAYABLE_GRACE_MS) {
+        autoLeaveToMenu('Joc desincronizat. Reîncearcă matchmaking.');
+      } else {
+        setWaitingUI();
+      }
+      return;
+    }
+
+    nonPlayableSinceMs = null;
 
     const oppUid = getOpponentUid(game, myUid);
     // Still waiting until we can identify opponent AND both have placements.
