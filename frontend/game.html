@@ -32,7 +32,14 @@
 
 <script src="config.js"></script>
 <script type="module">
-    import { auth, getUserSkins, joinOrCreateGame, getMyActiveGameId, waitForAuthReady } from './firebase.js';
+    import {
+        auth,
+        getUserSkins,
+        joinOrCreateGame,
+        getMyActiveGameId,
+        waitForAuthReady,
+        leaveMatchQueueIfWaiting,
+    } from './firebase.js';
 
     window.__bb_fb_game = {
         getCurrentUser: () => auth.currentUser,
@@ -40,7 +47,15 @@
         getUserSkins,
         joinOrCreateGame,
         getMyActiveGameId,
+        leaveMatchQueueIfWaiting,
     };
+
+    // Best-effort cleanup if user leaves the page while waiting in queue.
+    // Note: browsers may kill async work on unload, but this still helps a lot.
+    window.addEventListener('pagehide', () => {
+        const uid = localStorage.getItem('battleboats_userid');
+        if (uid) leaveMatchQueueIfWaiting(uid);
+    });
 </script>
 <script src="game.js"></script>
 </body>

@@ -460,6 +460,12 @@ async function confirmPlacement() {
         // Firebase mode: matchmaking în Firestore
         if (window.__bb_fb_game?.joinOrCreateGame) {
             const username = localStorage.getItem('connectedUser') || 'player';
+
+            // Best-effort: remove any stale queue entry that might still be set for me.
+            if (window.__bb_fb_game?.leaveMatchQueueIfWaiting) {
+                try { await window.__bb_fb_game.leaveMatchQueueIfWaiting(userId); } catch (_) {}
+            }
+
             const result = await window.__bb_fb_game.joinOrCreateGame(userId, username, placementData);
 
             // If we got paired immediately, go to battle.
@@ -488,7 +494,11 @@ async function confirmPlacement() {
                 await new Promise(r => setTimeout(r, 1500));
             }
 
-            // Timeout
+            // Timeout: cleanup queue so we don't leave stale waiting entry behind.
+            if (window.__bb_fb_game?.leaveMatchQueueIfWaiting) {
+                try { await window.__bb_fb_game.leaveMatchQueueIfWaiting(userId); } catch (_) {}
+            }
+
             confirmBtn.disabled = false;
             confirmBtn.style.backgroundColor = "#e67e22";
             confirmBtn.innerText = "Timeout. Încearcă din nou";

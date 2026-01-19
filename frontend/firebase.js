@@ -299,3 +299,27 @@ export async function getMyActiveGameId(uid) {
 
   return null;
 }
+
+// Best-effort cleanup: if I'm currently enqueued in matchQueue/global,
+// remove myself so others don't get paired with a stale (offline) user.
+export async function leaveMatchQueueIfWaiting(uid) {
+  if (!uid) return false;
+  const queueRef = doc(db, 'matchQueue', 'global');
+
+  try {
+    return await runTransaction(db, async (tx) => {
+      const snap = await tx.get(queueRef);
+      if (!snap.exists()) return false;
+      const data = snap.data() || {};
+      const waiting = data.waiting || null;
+      if (waiting?.uid && String(waiting.uid) === String(uid)) {
+        tx.set(queueRef, { waiting: null, updatedAt: serverTimestamp() }, { merge: true });
+        return true;
+      }
+      return false;
+    });
+  } catch (e) {
+    console.warn('leaveMatchQueueIfWaiting failed:', e);
+    return false;
+  }
+}
