@@ -111,6 +111,31 @@ export async function ensureLeaderboardDoc(uid, username) {
   return data;
 }
 
+export async function recordMatchResult(uid, username, didWin) {
+  if (!uid) throw new Error('Missing uid');
+  const ref = doc(db, 'leaderboard', uid);
+
+  // Ensure doc exists so update doesn't fail.
+  await ensureLeaderboardDoc(uid, username);
+
+  return await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    const data = snap.exists() ? (snap.data() || {}) : {};
+
+    const wins = Number(data.wins) || 0;
+    const losses = Number(data.losses) || 0;
+
+    tx.update(ref, {
+      username: username || data.username || null,
+      wins: didWin ? wins + 1 : wins,
+      losses: didWin ? losses : losses + 1,
+      updatedAt: serverTimestamp(),
+    });
+
+    return true;
+  });
+}
+
 export async function fbRegister(username, password) {
   const email = usernameToEmail(username);
   const cred = await createUserWithEmailAndPassword(auth, email, password);

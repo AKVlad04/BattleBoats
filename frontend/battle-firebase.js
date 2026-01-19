@@ -387,6 +387,9 @@ export async function startBattlePage() {
 
     // Finished
     if (game.status === 'finished') {
+      // Fire-and-forget stats update
+      recordResultIfNeeded(game);
+
       showFinished(game, myUid);
       updateShotsUI(game, myUid);
       updateIncomingShotsUI(game, myUid);
@@ -404,6 +407,26 @@ export async function startBattlePage() {
     updateShotsUI(game, myUid);
     updateIncomingShotsUI(game, myUid);
   });
+
+  // Track whether we've already recorded leaderboard update for this finished match.
+  let didRecordResult = false;
+
+  async function recordResultIfNeeded(game) {
+    if (didRecordResult) return;
+    if (game?.status !== 'finished') return;
+    if (!game?.winnerUid) return;
+
+    didRecordResult = true;
+    try {
+      const { recordMatchResult } = await import('./firebase.js');
+      const didWin = String(game.winnerUid) === String(myUid);
+      await recordMatchResult(myUid, connectedUser || (auth.currentUser?.displayName || null), didWin);
+    } catch (e) {
+      console.warn('recordMatchResult failed:', e);
+      // allow retry once
+      didRecordResult = false;
+    }
+  }
 
   async function handleAttack(index, cellElement) {
     if (cellElement.dataset.shot === '1') return;
