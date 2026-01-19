@@ -23,37 +23,15 @@
     </div>
 
     <script src="config.js"></script>
-    <script type="module">
-        import { auth, getUserSkins, saveUserSkins, ensureUserDoc, waitForAuthReady } from './firebase.js';
-
+    <script>
+        const API_BASE_URL = window.API_BASE_URL;
         let userId = null;
         let currentSkins = {};
 
+        // AUTH GUARD
         const connectedUser = localStorage.getItem("connectedUser");
         if (!connectedUser) {
             window.location.href = "index.html";
-        }
-
-        const CACHE_KEY = 'bb_cache_skins_v1';
-
-        function loadCachedSkins() {
-            try {
-                const raw = localStorage.getItem(CACHE_KEY);
-                if (!raw) return null;
-                const obj = JSON.parse(raw);
-                if (!obj || typeof obj !== 'object') return null;
-                return obj;
-            } catch {
-                return null;
-            }
-        }
-
-        function saveCachedSkins(skins) {
-            try {
-                localStorage.setItem(CACHE_KEY, JSON.stringify(skins || {}));
-            } catch {
-                // ignore
-            }
         }
 
         // Skin-uri disponibile pentru fiecare tip (folosim fișiere existente din /img)
@@ -91,6 +69,53 @@
             4: "Portavion (4 blocuri)"
         };
 
+        window.onload = async function() {
+            const username = localStorage.getItem("connectedUser");
+            console.log("=== INCARCARE SKINS.HTML ===");
+            console.log("Username din localStorage:", username);
+
+            if (!username) {
+                alert("Nu ești autentificat!");
+                window.location.href = "index.html";
+                return;
+            }
+
+            try {
+                // Obținem userId
+                console.log("Fetch user data pentru:", username);
+                const userResponse = await fetch(`${API_BASE_URL}/api/auth/user/${username}`);
+                console.log("User response status:", userResponse.status);
+
+                if (userResponse.ok) {
+                    const userData = await userResponse.json();
+                    console.log("User data:", userData);
+                    userId = userData.id;
+
+                    // Obținem skin-urile curente
+                    console.log("Fetch skins pentru userId:", userId);
+                    const skinsResponse = await fetch(`${API_BASE_URL}/api/skins/${userId}`);
+                    console.log("Skins response status:", skinsResponse.status);
+
+                    if (skinsResponse.ok) {
+                        currentSkins = await skinsResponse.json();
+                        console.log("Skins primite:", currentSkins);
+                    } else {
+                        const errorText = await skinsResponse.text();
+                        console.error("Eroare la obținerea skin-urilor:", errorText);
+                    }
+
+                    displaySkinsUI();
+                } else {
+                    const errorText = await userResponse.text();
+                    console.error("Eroare la obținerea userului:", errorText);
+                    alert("Eroare la încărcarea datelor utilizatorului: " + errorText);
+                }
+            } catch (error) {
+                console.error("Eroare:", error);
+                alert("Eroare de conexiune la server: " + error.message);
+            }
+        };
+
         function displaySkinsUI() {
             const content = document.getElementById("skins-content");
             content.innerHTML = "";
@@ -109,12 +134,13 @@
                 availableSkins[shipType].forEach(skin => {
                     const option = document.createElement("div");
                     option.className = "skin-option";
-                    if (currentSkins[String(shipType)] === skin.path || currentSkins[shipType] === skin.path) {
+                    if (currentSkins[shipType] === skin.path) {
                         option.classList.add("selected");
                     }
 
                     const preview = document.createElement("div");
                     preview.className = "skin-preview";
+                    // afisam imaginea reala
                     preview.innerHTML = `<img src="${skin.path}" alt="${skin.name}" />`;
 
                     const name = document.createElement("p");
@@ -126,6 +152,7 @@
                     option.appendChild(name);
 
                     option.onclick = () => selectSkin(shipType, skin.path, option);
+
                     optionsContainer.appendChild(option);
                 });
 
@@ -135,40 +162,14 @@
         }
 
         function selectSkin(shipType, skinPath, element) {
+            // Deselectează toate din același grup
             element.parentElement.querySelectorAll(".skin-option").forEach(opt => {
                 opt.classList.remove("selected");
             });
+
+            // Selectează noul skin
             element.classList.add("selected");
-            currentSkins[String(shipType)] = skinPath;
-        }
-
-        async function boot() {
-            const content = document.getElementById("skins-content");
-
-            // 1) Instant render from cache (if present)
-            const cached = loadCachedSkins();
-            if (cached) {
-                currentSkins = cached;
-                displaySkinsUI();
-            } else {
-                content.innerHTML = '<p>Se încarcă...</p>';
-            }
-
-            // 2) Then sync from Firestore
-            const u = await waitForAuthReady(3000);
-            if (!u) {
-                alert('Nu ești autentificat. Te rog intră din nou în cont.');
-                window.location.href = 'index.html';
-                return;
-            }
-
-            userId = u.uid;
-            await ensureUserDoc(userId, connectedUser);
-            const fresh = await getUserSkins(userId);
-
-            currentSkins = fresh || {};
-            saveCachedSkins(currentSkins);
-            displaySkinsUI();
+            currentSkins[shipType] = skinPath;
         }
 
         async function saveSkins() {
@@ -178,46 +179,57 @@
                 statusEl.innerText = 'Se salvează...';
             }
 
-            if (!auth.currentUser || !userId) {
+            if (!userId) {
                 if (statusEl) {
                     statusEl.style.color = '#e74c3c';
-                    statusEl.innerText = 'Nu ești autentificat.';
+                    statusEl.innerText = 'Eroare: ID utilizator lipsește';
                 }
                 return;
             }
 
+            // fallback: daca ceva nu e selectat, salvam default
             for (let shipType = 1; shipType <= 4; shipType++) {
-                if (!currentSkins[String(shipType)]) {
-                    currentSkins[String(shipType)] = "img/default.png";
+                if (!currentSkins[shipType]) {
+                    currentSkins[shipType] = "img/default.png";
                 }
             }
 
-            try {
-                const normalized = {
-                    '1': currentSkins['1'],
-                    '2': currentSkins['2'],
-                    '3': currentSkins['3'],
-                    '4': currentSkins['4'],
-                };
+            console.log("=== SALVARE SKIN-URI ===");
+            console.log("User ID:", userId);
+            console.log("Current Skins:", currentSkins);
 
-                await saveUserSkins(userId, normalized);
-                saveCachedSkins(normalized);
+            try {
+                for (let shipType = 1; shipType <= 4; shipType++) {
+                    const skinPath = currentSkins[shipType];
+
+                    const response = await fetch(`${API_BASE_URL}/api/skins/${userId}/${shipType}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ skinPath: skinPath })
+                    });
+
+                    const resultText = await response.text();
+
+                    if (!response.ok) {
+                        throw new Error(`Eroare la salvarea tipului ${shipType} (HTTP ${response.status}): ${resultText}`);
+                    }
+                }
 
                 if (statusEl) {
                     statusEl.style.color = '#2ecc71';
                     statusEl.innerText = '✅ Skin-urile au fost salvate cu succes!';
                 }
+
+                // rămânem pe pagină, fără alert și fără redirect
+                return;
             } catch (error) {
                 console.error("Eroare la salvare:", error);
                 if (statusEl) {
                     statusEl.style.color = '#e74c3c';
-                    statusEl.innerText = '❌ Eroare la salvarea skin-urilor: ' + (error?.message || error);
+                    statusEl.innerText = '❌ Eroare la salvarea skin-urilor: ' + error.message;
                 }
             }
         }
-
-        window.saveSkins = saveSkins;
-        window.onload = boot;
     </script>
 </body>
 </html>

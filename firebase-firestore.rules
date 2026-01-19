@@ -1,0 +1,70 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isMe(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isPlayer(data) {
+      return signedIn() && (
+        (data.player1 != null && data.player1.uid == request.auth.uid) ||
+        (data.player2 != null && data.player2.uid == request.auth.uid)
+      );
+    }
+
+    // --- USERS ---
+    // Needed for leaderboard to list all accounts. Make it public read.
+    // If you want privacy, create a separate publicUsers collection instead.
+    match /users/{uid} {
+      allow read: if true;
+      allow create, update, delete: if isMe(uid);
+    }
+
+    // --- LEADERBOARD ---
+    // Public read. Each user can create/update ONLY their own document.
+    match /leaderboard/{uid} {
+      allow read: if true;
+      allow create, update: if isMe(uid);
+      allow delete: if false;
+    }
+
+    // --- MATCHMAKING QUEUE ---
+    // IMPORTANT: Firestore transactions MUST be able to read any doc they 'get()'.
+    // joinOrCreateGame() does tx.get(matchQueue/global), so we must allow read for signed-in.
+    // This still blocks anonymous access.
+    match /matchQueue/{docId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn();
+      allow delete: if false;
+    }
+
+    // --- GAMES ---
+    match /games/{gameId} {
+      // Read only for the two players.
+      allow read: if isPlayer(resource.data);
+
+      // Game is created during transaction. Allow if requester is player1 or player2.
+      allow create: if signedIn()
+        && (
+          request.resource.data.player1.uid == request.auth.uid ||
+          request.resource.data.player2.uid == request.auth.uid
+        );
+
+      // Allow updates only by players.
+      allow update: if isPlayer(resource.data) && isPlayer(request.resource.data);
+
+      allow delete: if false;
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -33,20 +33,6 @@
     </div>
 
     <script src="config.js"></script>
-    <script type="module">
-        import { fbRegister, fbLogin } from './firebase.js';
-
-        // Keep existing onclick="register()" / onclick="login()" in HTML.
-        window.register = async function register() {
-            return await window.__bb_register();
-        };
-        window.login = async function login() {
-            return await window.__bb_login();
-        };
-
-        // Wire to the existing logic in script.js (keeps UI messages unchanged)
-        window.__bb_fb = { fbRegister, fbLogin };
-    </script>
     <script src="script.js"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 // Centralized API base URL.
 // Network-friendly default: same-origin (empty string).
-// If you open the frontend from http://<server-ip>:8081, API calls go to the same host.
+// This means: if frontend is served from http://<server-ip>:8081, API calls go to the same host.
 // You can still override by setting window.API_BASE_URL before other scripts.
 window.API_BASE_URL = window.API_BASE_URL || '';
 

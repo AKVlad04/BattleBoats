@@ -56,47 +56,34 @@
 </div>
 
 <script src="config.js"></script>
-<script type="module">
-    import { auth, waitForAuthReady, ensureLeaderboardDoc } from './firebase.js';
-    import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+<script>
+    const API_BASE_URL = window.API_BASE_URL;
 
     const connectedUser = localStorage.getItem('connectedUser');
     if (!connectedUser) {
         window.location.href = 'index.html';
     }
 
-    const db = getFirestore();
-
-    function safeNum(v) {
-        const n = Number(v);
-        return Number.isFinite(n) ? n : 0;
-    }
-
     async function loadStats() {
         document.getElementById('subtitle').innerText = `Pentru contul: ${connectedUser}`;
 
         try {
-            const u = await waitForAuthReady(3000);
-            if (!u) {
-                throw new Error('Nu ești autentificat. Te rog reintră în cont.');
+            // DB userId
+            const userResp = await fetch(`${API_BASE_URL}/api/auth/user/${connectedUser}`);
+            if (!userResp.ok) throw new Error('Nu pot încărca user-ul logat');
+            const user = await userResp.json();
+
+            const statsResp = await fetch(`${API_BASE_URL}/api/stats/${user.id}`);
+            if (!statsResp.ok) {
+                const body = await statsResp.text();
+                throw new Error(`Nu pot încărca statisticile (HTTP ${statsResp.status}): ${body}`);
             }
+            const stats = await statsResp.json();
 
-            // make sure doc exists
-            await ensureLeaderboardDoc(u.uid, connectedUser);
-
-            const ref = doc(db, 'leaderboard', u.uid);
-            const snap = await getDoc(ref);
-
-            const data = snap.exists() ? (snap.data() || {}) : {};
-            const wins = safeNum(data.wins);
-            const losses = safeNum(data.losses);
-            const gamesPlayed = wins + losses;
-            const winRate = gamesPlayed > 0 ? (wins * 100 / gamesPlayed) : 0;
-
-            document.getElementById('gamesPlayed').innerText = gamesPlayed;
-            document.getElementById('wins').innerText = wins;
-            document.getElementById('losses').innerText = losses;
-            document.getElementById('winRate').innerText = `${winRate.toFixed(1)}%`;
+            document.getElementById('gamesPlayed').innerText = stats.gamesPlayed;
+            document.getElementById('wins').innerText = stats.wins;
+            document.getElementById('losses').innerText = (typeof stats.losses === 'number') ? stats.losses : (stats.gamesPlayed - stats.wins);
+            document.getElementById('winRate').innerText = `${Number(stats.winRate).toFixed(1)}%`;
         } catch (e) {
             console.error(e);
             document.getElementById('error').innerText = `❌ ${e.message}`;

@@ -20,12 +20,16 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        // Pentru acest proiect, API-ul este accesat din frontend static si nu folosim cookie/session auth.
-        // Dezactivam complet Spring Security pentru a evita 403 (inclusiv pe preflight/POST).
+        // API + frontend static fără session/cookies.
+        // Lăsăm totul permis, dar păstrăm CORS activ ca browserul să accepte request-urile cross-origin când e cazul.
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+                .cors(cors -> {})
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/", "/index.html", "/**/*.html", "/**/*.css", "/**/*.js", "/img/**", "/sounds/**").permitAll()
+                        .requestMatchers("/api/**").permitAll()
+                        .anyRequest().permitAll()
+                );
 
         return http.build();
     }

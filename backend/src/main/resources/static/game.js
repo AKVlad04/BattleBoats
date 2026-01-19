@@ -22,37 +22,10 @@ if (!connectedUser) {
     window.location.href = "index.html";
 }
 
-// --- 1. IDENTITATE UTILIZATOR ---
+// --- 1. IDENTITATE UTILIZATOR (folosim ID-ul din DB) ---
 let userId = null;
 
 async function initUserIdFromLogin() {
-    // Firebase mode: wait for auth session to restore
-    if (window.__bb_fb_game?.waitForAuthReady) {
-        const u = await window.__bb_fb_game.waitForAuthReady(3000);
-        if (!u) {
-            throw new Error('Neautentificat');
-        }
-        userId = String(u.uid);
-        localStorage.setItem("battleboats_userid", userId);
-        return;
-    }
-
-    // Firebase fallback mode (older wrapper)
-    if (window.__bb_fb_game?.getCurrentUser) {
-        let u = window.__bb_fb_game.getCurrentUser();
-        if (!u) {
-            await new Promise((resolve) => setTimeout(resolve, 300));
-            u = window.__bb_fb_game.getCurrentUser();
-        }
-        if (!u) {
-            throw new Error('Neautentificat');
-        }
-        userId = String(u.uid);
-        localStorage.setItem("battleboats_userid", userId);
-        return;
-    }
-
-    // Legacy backend mode
     if (!connectedUser) return;
     const res = await fetch(`${API_BASE_URL}/api/auth/user/${connectedUser}`);
     if (!res.ok) throw new Error("Nu pot încărca user-ul logat");
@@ -67,8 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         await initUserIdFromLogin();
     } catch (e) {
         console.error(e);
-        // Don't instantly nuke localStorage on transient auth hydration issues.
-        alert('Sesiunea nu a fost încă încărcată. Reîncearcă (refresh). Dacă persistă, relogare.');
+        localStorage.removeItem("connectedUser");
         window.location.href = "index.html";
         return;
     }
@@ -117,21 +89,15 @@ async function fetchAndDisplaySavedShips() {
     const username = localStorage.getItem("connectedUser");
     let userSkins = {};
 
-    // Firebase mode: skins din Firestore
-    if (window.__bb_fb_game?.getUserSkins && userId) {
+    if (username) {
         try {
-            userSkins = await window.__bb_fb_game.getUserSkins(userId);
-        } catch (error) {
-            console.error("Eroare la încărcarea skin-urilor (Firebase):", error);
-        }
-    } else if (username) {
-        // Legacy backend mode
-        try {
+            // Obținem ID-ul userului din backend
             const userResponse = await fetch(`${API_BASE_URL}/api/auth/user/${username}`);
             if (userResponse.ok) {
                 const userData = await userResponse.json();
                 const userIdFromDB = userData.id;
 
+                // Obținem skin-urile userului
                 const skinsResponse = await fetch(`${API_BASE_URL}/api/skins/${userIdFromDB}`);
                 if (skinsResponse.ok) {
                     userSkins = await skinsResponse.json();
@@ -144,8 +110,7 @@ async function fetchAndDisplaySavedShips() {
 
     // Atașăm skin-urile la nave
     standardShips.forEach(ship => {
-        // backend returna chei numerice; firebase le păstrează ca string
-        ship.skinPath = userSkins[String(ship.size)] || userSkins[ship.size] || "img/default.png";
+        ship.skinPath = userSkins[ship.size] || "img/default.png";
     });
 
     displayShipsInDock(standardShips);
@@ -454,49 +419,11 @@ async function confirmPlacement() {
         occupiedIndices: ship.indices
     }));
 
+    // Salvăm local navele noastre ca să le vedem pe battle.html
     localStorage.setItem("my_ships", JSON.stringify(placementData));
 
     try {
-        // Firebase mode: matchmaking în Firestore
-        if (window.__bb_fb_game?.joinOrCreateGame) {
-            const username = localStorage.getItem('connectedUser') || 'player';
-            const result = await window.__bb_fb_game.joinOrCreateGame(userId, username, placementData);
-
-            // If we got paired immediately, go to battle.
-            if (result?.gameId) {
-                localStorage.setItem("current_game_id", result.gameId);
-                window.location.href = "battle.html";
-                return;
-            }
-
-            // Otherwise, we're waiting in queue. Poll until a game appears for us.
-            confirmBtn.disabled = true;
-            confirmBtn.style.backgroundColor = "#7f8c8d";
-            confirmBtn.innerText = "⏳ Căutăm adversar...";
-
-            const timeoutMs = 90_000; // 90s
-            const start = Date.now();
-
-            while (Date.now() - start < timeoutMs) {
-                // getMyActiveGameId() is exposed by firebase module wrapper
-                const gid = await window.__bb_fb_game.getMyActiveGameId(userId);
-                if (gid) {
-                    localStorage.setItem("current_game_id", gid);
-                    window.location.href = "battle.html";
-                    return;
-                }
-                await new Promise(r => setTimeout(r, 1500));
-            }
-
-            // Timeout
-            confirmBtn.disabled = false;
-            confirmBtn.style.backgroundColor = "#e67e22";
-            confirmBtn.innerText = "Timeout. Încearcă din nou";
-            alert('Nu am găsit adversar în timp util. Încearcă din nou.');
-            return;
-        }
-
-        // Legacy backend mode
+        // Apelăm endpoint-ul de JOIN pentru Multiplayer
         const response = await fetch(`${API_BASE_URL}/api/game/join?userId=${userId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -505,15 +432,15 @@ async function confirmPlacement() {
 
         if (response.ok) {
             const data = await response.json();
+            // Salvăm ID-ul jocului
             localStorage.setItem("current_game_id", data.gameId);
+            // Mergem la luptă!
             window.location.href = "battle.html";
         } else {
             alert("Eroare la conectare server.");
         }
     } catch (error) {
         console.error(error);
-        const msg = error?.message || String(error);
-        // Firestore often throws permission-denied / failed-precondition etc.
-        alert("Eroare matchmaking: " + msg);
+        alert("Eroare de rețea.");
     }
 }

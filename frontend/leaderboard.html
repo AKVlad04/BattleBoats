@@ -71,42 +71,111 @@
 </div>
 
 <script src="config.js"></script>
-<script>
-    const API_BASE_URL = window.API_BASE_URL;
+<script type="module">
+    import { db } from './firebase.js';
+    import { collection, getDocs, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
     const connectedUser = localStorage.getItem('connectedUser');
     if (!connectedUser) {
         window.location.href = 'index.html';
     }
 
-    async function loadLeaderboard() {
+    const CACHE_KEY = 'bb_cache_leaderboard_v1';
+
+    function safeNum(v) {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 0;
+    }
+
+    function render(list) {
+        const rowsEl = document.getElementById('rows');
+        rowsEl.innerHTML = '';
+
+        (list || []).forEach((e, idx) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="rank">${idx + 1}</td>
+                <td>${e.username}</td>
+                <td>${e.wins}</td>
+                <td>${e.losses}</td>
+                <td>${e.gamesPlayed}</td>
+                <td>${Number(e.winRate).toFixed(1)}%</td>
+            `;
+            rowsEl.appendChild(tr);
+        });
+
+        if (!list || list.length === 0) {
+            rowsEl.innerHTML = `<tr><td colspan="6" class="muted">Nu există conturi încă.</td></tr>`;
+        }
+    }
+
+    function loadCached() {
         try {
-            const resp = await fetch(`${API_BASE_URL}/api/leaderboard`);
-            if (!resp.ok) {
-                const body = await resp.text();
-                throw new Error(`HTTP ${resp.status}: ${body}`);
-            }
+            const raw = localStorage.getItem(CACHE_KEY);
+            if (!raw) return null;
+            const obj = JSON.parse(raw);
+            if (!Array.isArray(obj)) return null;
+            return obj;
+        } catch {
+            return null;
+        }
+    }
 
-            const list = await resp.json();
-            const tbody = document.getElementById('rows');
-            tbody.innerHTML = '';
+    function saveCached(list) {
+        try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify(list || []));
+        } catch {
+            // ignore
+        }
+    }
 
-            list.forEach((e, idx) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="rank">${idx + 1}</td>
-                    <td>${e.username}</td>
-                    <td>${e.wins}</td>
-                    <td>${e.losses}</td>
-                    <td>${e.gamesPlayed}</td>
-                    <td>${Number(e.winRate).toFixed(1)}%</td>
-                `;
-                tbody.appendChild(tr);
+    async function loadLeaderboard() {
+        // 1) Instant render from cache
+        const cached = loadCached();
+        if (cached) {
+            render(cached);
+        } else {
+            document.getElementById('rows').innerHTML = `<tr><td colspan="6" class="muted">Se încarcă...</td></tr>`;
+        }
+
+        try {
+            const usersSnap = await getDocs(collection(db, 'users'));
+            const byUid = new Map();
+            usersSnap.forEach(d => {
+                const u = d.data() || {};
+                byUid.set(d.id, {
+                    uid: d.id,
+                    username: u.username || 'Anon',
+                    wins: 0,
+                    losses: 0,
+                });
             });
 
-            if (list.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="muted">Nu există date încă.</td></tr>`;
-            }
+            const lbSnap = await getDocs(query(collection(db, 'leaderboard'), orderBy('wins', 'desc'), limit(500)));
+            lbSnap.forEach(d => {
+                const data = d.data() || {};
+                const entry = byUid.get(d.id) || { uid: d.id, username: data.username || 'Anon', wins: 0, losses: 0 };
+                entry.username = entry.username || data.username || 'Anon';
+                entry.wins = safeNum(data.wins);
+                entry.losses = safeNum(data.losses);
+                byUid.set(d.id, entry);
+            });
+
+            const list = Array.from(byUid.values()).map(e => {
+                const gamesPlayed = e.wins + e.losses;
+                const winRate = gamesPlayed ? (e.wins * 100 / gamesPlayed) : 0;
+                return { ...e, gamesPlayed, winRate };
+            });
+
+            list.sort((a, b) => {
+                if (b.wins !== a.wins) return b.wins - a.wins;
+                if (b.winRate !== a.winRate) return b.winRate - a.winRate;
+                if (b.gamesPlayed !== a.gamesPlayed) return b.gamesPlayed - a.gamesPlayed;
+                return String(a.username).localeCompare(String(b.username));
+            });
+
+            saveCached(list);
+            render(list);
         } catch (e) {
             console.error(e);
             document.getElementById('error').innerText = `❌ Nu pot încărca leaderboard: ${e.message}`;
@@ -118,4 +187,3 @@
 
 </body>
 </html>
-
