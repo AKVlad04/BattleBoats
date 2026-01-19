@@ -292,15 +292,57 @@ export async function joinOrCreateGame(uid, username, placementData) {
 }
 
 export async function getMyActiveGameId(uid) {
-  // Query for an active game where the user is either player1 or player2.
-  // We keep it to 1 result to reduce reads.
-  const q1 = query(collection(db, 'games'), where('player1.uid', '==', uid), where('status', '==', 'active'), limit(1));
-  const s1 = await getDocs(q1);
-  if (!s1.empty) return s1.docs[0].id;
+  // Return an active game ONLY if it looks playable.
+  // This avoids reusing stale games that were left "active" when the opponent left.
+  const MAX_GAME_AGE_MS = 10 * 60 * 1000; // 10 minutes
 
-  const q2 = query(collection(db, 'games'), where('player2.uid', '==', uid), where('status', '==', 'active'), limit(1));
-  const s2 = await getDocs(q2);
-  if (!s2.empty) return s2.docs[0].id;
+  async function pickFirstPlayable(q) {
+    const s = await getDocs(q);
+    if (s.empty) return null;
+
+    // We request limit(1), but still validate the doc.
+    const d = s.docs[0];
+    const g = d.data() || {};
+
+    const p1 = g?.player1?.uid;
+    const p2 = g?.player2?.uid;
+    if (!p1 || !p2) return null;
+
+    const placements = g?.placements || {};
+    const p1pl = placements?.[p1];
+    const p2pl = placements?.[p2];
+    if (!Array.isArray(p1pl) || p1pl.length === 0) return null;
+    if (!Array.isArray(p2pl) || p2pl.length === 0) return null;
+
+    // Age check (createdAt can be missing on older docs)
+    try {
+      const createdAt = g?.createdAt;
+      const ms = createdAt && typeof createdAt.toMillis === 'function' ? createdAt.toMillis() : null;
+      if (ms && Date.now() - ms > MAX_GAME_AGE_MS) return null;
+    } catch {
+      // ignore
+    }
+
+    return d.id;
+  }
+
+  const q1 = query(
+    collection(db, 'games'),
+    where('player1.uid', '==', uid),
+    where('status', '==', 'active'),
+    limit(1)
+  );
+  const g1 = await pickFirstPlayable(q1);
+  if (g1) return g1;
+
+  const q2 = query(
+    collection(db, 'games'),
+    where('player2.uid', '==', uid),
+    where('status', '==', 'active'),
+    limit(1)
+  );
+  const g2 = await pickFirstPlayable(q2);
+  if (g2) return g2;
 
   return null;
 }
