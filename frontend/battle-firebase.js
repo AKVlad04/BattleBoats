@@ -51,6 +51,100 @@ function flattenPlacementToOccupiedSet(placementData) {
   return s;
 }
 
+function getOtherUid(game, uid) {
+  const p1 = game?.player1?.uid;
+  const p2 = game?.player2?.uid;
+  if (!p1 || !p2) return null;
+  return String(p1) === String(uid) ? p2 : p1;
+}
+
+function playSound(name) {
+  try {
+    const a = new Audio(`sounds/${name}.mp3`);
+    a.volume = 0.75;
+    a.play().catch(() => {});
+  } catch {
+    // ignore
+  }
+}
+
+function showFinished(game, myUid) {
+  const enemyBoard = document.getElementById('enemy-board');
+  const statusText = document.getElementById('turn-indicator');
+  const banner = document.getElementById('end-banner');
+  const actions = document.getElementById('end-actions');
+
+  enemyBoard?.classList.add('disabled-board');
+
+  if (statusText) statusText.style.display = 'none';
+
+  const winnerIsMe = String(game?.winnerUid || '') === String(myUid);
+  if (banner) {
+    banner.style.display = 'block';
+    banner.classList.remove('win', 'lose');
+    banner.classList.add(winnerIsMe ? 'win' : 'lose');
+    banner.innerText = winnerIsMe ? '🏆 VICTORIE!' : '💀 ÎNFRÂNGERE!';
+  }
+
+  try {
+    const dot = document.getElementById('turn-dot');
+    dot?.classList.remove('yours', 'theirs', 'waiting');
+  } catch {}
+
+  if (actions) actions.style.display = 'flex';
+
+  playSound(winnerIsMe ? 'win' : 'lose');
+}
+
+function animateHit(cell) {
+  if (!cell) return;
+  cell.classList.remove('hit-flash');
+  // force reflow
+  void cell.offsetWidth;
+  cell.classList.add('hit-flash');
+}
+
+function animateMiss(cell) {
+  if (!cell) return;
+  cell.classList.remove('miss-shake');
+  void cell.offsetWidth;
+  cell.classList.add('miss-shake');
+}
+
+function updateIncomingShotsUI(game, myUid) {
+  const myBoard = document.getElementById('my-board');
+  const oppUid = getOtherUid(game, myUid);
+  if (!myBoard || !oppUid) return;
+
+  const incomingShots = toSet(game?.shots?.[oppUid]);
+  const incomingHits = toSet(game?.hits?.[oppUid]);
+
+  myBoard.querySelectorAll('.grid-cell').forEach((cell) => {
+    const idx = Number(cell.dataset.index);
+    if (!incomingShots.has(idx)) return;
+
+    const isHit = incomingHits.has(idx);
+
+    // If the cell has a ship-skin background, prefer a "damaged" effect instead of painting red.
+    const hasShipSkin = Boolean(cell.style.backgroundImage);
+
+    if (isHit) {
+      if (hasShipSkin) {
+        cell.classList.add('hit-skin');
+        cell.textContent = '';
+      } else {
+        cell.classList.add('hit');
+        cell.textContent = '💥';
+      }
+      animateHit(cell);
+    } else {
+      cell.classList.add('miss');
+      cell.textContent = '❌';
+      animateMiss(cell);
+    }
+  });
+}
+
 function hasBothPlayers(game) {
   return Boolean(game?.player1?.uid) && Boolean(game?.player2?.uid);
 }
@@ -311,8 +405,9 @@ export async function startBattlePage() {
     }
 
     if (game.status === 'finished') {
-      showFinished(game);
+      showFinished(game, myUid);
       updateShotsUI(game, myUid);
+      updateIncomingShotsUI(game, myUid);
       return;
     }
 
@@ -320,6 +415,7 @@ export async function startBattlePage() {
     else setTheirTurnUI();
 
     updateShotsUI(game, myUid);
+    updateIncomingShotsUI(game, myUid);
   });
 
   async function handleAttack(index, cellElement) {
@@ -372,7 +468,10 @@ export async function startBattlePage() {
         updates.status = 'finished';
         updates.winnerUid = myUid;
       } else {
-        updates.currentTurnUid = oppUid;
+        // Battleship rule: if you HIT, you keep shooting; only switch on MISS.
+        if (!hit) {
+          updates.currentTurnUid = oppUid;
+        }
       }
 
       tx.update(gameRef, updates);

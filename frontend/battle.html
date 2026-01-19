@@ -54,6 +54,26 @@
         .hit { background-color: #e74c3c !important; } /* Roșu */
         .miss { background-color: #95a5a6 !important; } /* Gri */
 
+        /* Când e hit pe o celulă care are skin de navă, aplicăm efect de "avariat" */
+        .grid-cell.hit-skin {
+            filter: grayscale(1) brightness(0.55) contrast(1.2);
+            box-shadow: inset 0 0 0 2px rgba(231, 76, 60, 0.85);
+        }
+
+        /* Mică iconiță pentru lovituri pe celule fără skin */
+        .grid-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            user-select: none;
+        }
+
+        /* Nu mai lumina la hover peste celule deja trase */
+        .enemy-board .grid-cell[data-shot='1']:hover {
+            background-color: inherit;
+        }
+
         /* Butoane finale */
         #end-actions {
             margin: 18px auto 0 auto;
@@ -267,6 +287,13 @@
 </div>
 
 <script src="config.js"></script>
+<script>
+  // Restart flow: clear current game and go back to placement screen.
+  function playAgain() {
+    try { localStorage.removeItem('current_game_id'); } catch (e) {}
+    window.location.href = 'game.html';
+  }
+</script>
 <script type="module">
   import { startBattlePage } from './battle-firebase.js';
   startBattlePage();
