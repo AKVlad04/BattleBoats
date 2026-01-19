@@ -18,6 +18,19 @@ service cloud.firestore {
       );
     }
 
+    function otherUid(data) {
+      return (data.player1 != null && data.player1.uid == request.auth.uid)
+        ? data.player2.uid
+        : data.player1.uid;
+    }
+
+    function onlyAllowedGameFieldsChanged() {
+      // clients may only change these fields
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly([
+        'shots', 'hits', 'currentTurnUid', 'status', 'winnerUid', 'updatedAt'
+      ]);
+    }
+
     // --- USERS ---
     // Needed for leaderboard to list all accounts. Make it public read.
     // If you want privacy, create a separate publicUsers collection instead.
@@ -56,8 +69,12 @@ service cloud.firestore {
           request.resource.data.player2.uid == request.auth.uid
         );
 
-      // Allow updates only by players.
-      allow update: if isPlayer(resource.data) && isPlayer(request.resource.data);
+      // Updates are allowed only for the two players and only on safe fields.
+      // This avoids accidental full-document writes that can break with updateMask=[]
+      // and keeps player identities/placements immutable.
+      allow update: if isPlayer(resource.data)
+        && isPlayer(request.resource.data)
+        && onlyAllowedGameFieldsChanged();
 
       allow delete: if false;
     }

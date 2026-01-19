@@ -465,7 +465,7 @@ export async function startBattlePage() {
     }).catch((e) => {
       console.warn('Attack error:', e);
       // optional: show status
-      statusText.innerText = `⚠️ ${e.message || e}`;
+      statusText.innerText = `⚠️ ${e?.message || e}`;
       statusText.style.color = '#f1c40f';
       setTimeout(() => {
         // status will refresh from snapshot
