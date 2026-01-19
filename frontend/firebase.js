@@ -295,42 +295,45 @@ export async function getMyActiveGameId(uid) {
   // Return an active game ONLY if it looks playable.
   // This avoids reusing stale games that were left "active" when the opponent left.
   const MAX_GAME_AGE_MS = 10 * 60 * 1000; // 10 minutes
+  const MAX_SCAN = 10;
 
   async function pickFirstPlayable(q) {
     const s = await getDocs(q);
     if (s.empty) return null;
 
-    // We request limit(1), but still validate the doc.
-    const d = s.docs[0];
-    const g = d.data() || {};
+    for (const d of s.docs) {
+      const g = d.data() || {};
 
-    const p1 = g?.player1?.uid;
-    const p2 = g?.player2?.uid;
-    if (!p1 || !p2) return null;
+      const p1 = g?.player1?.uid;
+      const p2 = g?.player2?.uid;
+      if (!p1 || !p2) continue;
 
-    const placements = g?.placements || {};
-    const p1pl = placements?.[p1];
-    const p2pl = placements?.[p2];
-    if (!Array.isArray(p1pl) || p1pl.length === 0) return null;
-    if (!Array.isArray(p2pl) || p2pl.length === 0) return null;
+      const placements = g?.placements || {};
+      const p1pl = placements?.[p1];
+      const p2pl = placements?.[p2];
+      if (!Array.isArray(p1pl) || p1pl.length === 0) continue;
+      if (!Array.isArray(p2pl) || p2pl.length === 0) continue;
 
-    // Age check (createdAt can be missing on older docs)
-    try {
-      const createdAt = g?.createdAt;
-      const ms = createdAt && typeof createdAt.toMillis === 'function' ? createdAt.toMillis() : null;
-      if (ms && Date.now() - ms > MAX_GAME_AGE_MS) return null;
-    } catch {
-      // ignore
+      // Age check (createdAt can be missing on older docs)
+      try {
+        const createdAt = g?.createdAt;
+        const ms = createdAt && typeof createdAt.toMillis === 'function' ? createdAt.toMillis() : null;
+        if (ms && Date.now() - ms > MAX_GAME_AGE_MS) continue;
+      } catch {
+        // ignore
+      }
+
+      return d.id;
     }
 
-    return d.id;
+    return null;
   }
 
   const q1 = query(
     collection(db, 'games'),
     where('player1.uid', '==', uid),
     where('status', '==', 'active'),
-    limit(1)
+    limit(MAX_SCAN)
   );
   const g1 = await pickFirstPlayable(q1);
   if (g1) return g1;
@@ -339,7 +342,7 @@ export async function getMyActiveGameId(uid) {
     collection(db, 'games'),
     where('player2.uid', '==', uid),
     where('status', '==', 'active'),
-    limit(1)
+    limit(MAX_SCAN)
   );
   const g2 = await pickFirstPlayable(q2);
   if (g2) return g2;

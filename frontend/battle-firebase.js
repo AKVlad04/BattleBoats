@@ -41,6 +41,12 @@ function isMyTurn(game, myUid) {
   return String(game?.currentTurnUid || '') === String(myUid);
 }
 
+function isOppTurn(game, myUid) {
+  const oppUid = getOpponentUid(game, myUid);
+  if (!oppUid) return false;
+  return String(game?.currentTurnUid || '') === String(oppUid);
+}
+
 function flattenPlacementToOccupiedSet(placementData) {
   const s = new Set();
   (placementData || []).forEach(ship => {
@@ -367,43 +373,19 @@ export async function startBattlePage() {
     if (!isGamePlayableForUser(game, myUid)) {
       if (nonPlayableSinceMs == null) nonPlayableSinceMs = Date.now();
 
-      const oppUid = getOpponentUid(game, myUid);
-      if (!oppUid || !hasPlacement(game, myUid) || !hasPlacement(game, oppUid) || !game?.currentTurnUid) {
-        setWaitingUI();
-        updateShotsUI(game, myUid);
+      setWaitingUI();
+      updateShotsUI(game, myUid);
+      updateIncomingShotsUI(game, myUid);
 
-        if (Date.now() - nonPlayableSinceMs > NON_PLAYABLE_GRACE_MS) {
-          autoLeaveToMenu('Nu am găsit un adversar valid. Reîncearcă matchmaking.');
-        }
-        return;
-      }
-
-      // Other inconsistency (e.g., currentTurnUid not one of players)
       if (Date.now() - nonPlayableSinceMs > NON_PLAYABLE_GRACE_MS) {
-        autoLeaveToMenu('Joc desincronizat. Reîncearcă matchmaking.');
-      } else {
-        setWaitingUI();
+        autoLeaveToMenu('Nu am găsit un adversar valid. Reîncearcă matchmaking.');
       }
       return;
     }
 
     nonPlayableSinceMs = null;
 
-    const oppUid = getOpponentUid(game, myUid);
-    // Still waiting until we can identify opponent AND both have placements.
-    if (!oppUid || !hasPlacement(game, myUid) || !hasPlacement(game, oppUid)) {
-      setWaitingUI();
-      // still update UI with whatever shots exist
-      updateShotsUI(game, myUid);
-      return;
-    }
-
-    if (!game?.currentTurnUid) {
-      setWaitingUI();
-      updateShotsUI(game, myUid);
-      return;
-    }
-
+    // Finished
     if (game.status === 'finished') {
       showFinished(game, myUid);
       updateShotsUI(game, myUid);
@@ -411,80 +393,17 @@ export async function startBattlePage() {
       return;
     }
 
+    // Turn UI: only show their-turn if it's strictly opponent's turn.
     if (isMyTurn(game, myUid)) setMyTurnUI();
-    else setTheirTurnUI();
+    else if (isOppTurn(game, myUid)) setTheirTurnUI();
+    else {
+      // Safety fall-back for any weird value
+      setWaitingUI();
+    }
 
     updateShotsUI(game, myUid);
     updateIncomingShotsUI(game, myUid);
   });
 
   async function handleAttack(index, cellElement) {
-    if (cellElement.dataset.shot === '1') return;
-
-    await runTransaction(db, async (tx) => {
-      const snap = await tx.get(gameRef);
-      if (!snap.exists()) throw new Error('Joc inexistent');
-      const game = snap.data();
-
-      if (game.status === 'finished') return;
-      if (!hasBothPlayers(game)) throw new Error('Nu există încă adversar');
-
-      const oppUid = getOpponentUid(game, myUid);
-      if (!oppUid) throw new Error('Adversar invalid');
-
-      // Don't allow play until both sides placed ships; avoids swapping turns to a "ghost".
-      if (!hasPlacement(game, myUid) || !hasPlacement(game, oppUid)) {
-        throw new Error('Se așteaptă plasarea navelor...');
-      }
-
-      if (!isMyTurn(game, myUid)) throw new Error('Nu este rândul tău');
-
-      const myShots = safeArr(game?.shots?.[myUid]);
-      if (myShots.includes(index)) return;
-
-      // determine hit by checking opponent placements
-      const oppPlacement = game?.placements?.[oppUid];
-      const oppOcc = flattenPlacementToOccupiedSet(oppPlacement);
-      const hit = oppOcc.has(index);
-
-      const updates = {
-        updatedAt: serverTimestamp(),
-        [`shots.${myUid}`]: arrayUnion(index),
-      };
-
-      if (hit) {
-        updates[`hits.${myUid}`] = arrayUnion(index);
-      }
-
-      // Check win condition: all opponent occupied indices are hit by me
-      const prevHits = safeArr(game?.hits?.[myUid]);
-      const newMyHitsSet = new Set(prevHits);
-      if (hit) newMyHitsSet.add(index);
-
-      const allOpp = Array.from(oppOcc);
-      const iWon = allOpp.length > 0 && allOpp.every(v => newMyHitsSet.has(v));
-
-      if (iWon) {
-        updates.status = 'finished';
-        updates.winnerUid = myUid;
-      } else {
-        // Battleship rule: if you HIT, you keep shooting; only switch on MISS.
-        if (!hit) {
-          updates.currentTurnUid = oppUid;
-        }
-      }
-
-      tx.update(gameRef, updates);
-    }).catch((e) => {
-      console.warn('Attack error:', e);
-      // optional: show status
-      statusText.innerText = `⚠️ ${e.message || e}`;
-      statusText.style.color = '#f1c40f';
-      setTimeout(() => {
-        // status will refresh from snapshot
-      }, 600);
-    });
-
-    cellElement.dataset.shot = '1';
-  }
-}
+    if
